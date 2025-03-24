@@ -1,5 +1,5 @@
 import numpy as np
-
+from typing import Sequence
 from src.constraints import Constraint
 from src.utils.type_definitions import *
 
@@ -15,7 +15,7 @@ class SolvingBoard:
     '''
 
     __slots__ = ("candidates_board", "assigned_board",)
-    constraints: list[Constraint] = []
+    constraints: Sequence[Constraint] = []
 
     def __init__(self,
                  puzzle: NumBoard,

@@ -40,12 +40,12 @@ git push origin main
 
 ## 进行中
 
-+ [ ] 做工程版本
++ [ ] 迁移到工程版本
   + [x] 开新仓库，组织结构
   + [x] 写一个好测试
   + [x] 加入多种constraints
     + [x] 做测试
-  + [ ] 迁移重写第4代核心代码，全部用numba加速
+  + [ ] 重写第4代核心代码，全部用numba加速
     + [ ] nogil优化
     + [ ] 优先查unknown，或者随机化，避免卡死在无解情况
     + [x] np.ascontiguousarray【放弃，太麻烦了】

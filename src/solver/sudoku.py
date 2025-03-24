@@ -2,6 +2,7 @@ import numpy as np
 import time
 import copy
 import sys
+from typing import Sequence
 from src.utils.type_definitions import *
 from src.constraints import Constraint
 from .solvingboard import SolvingBoard
@@ -27,10 +28,10 @@ class Sudoku:
 
     def __init__(self,
                  puzzle: NumBoard,
-                 constraints: list[Constraint] = []
+                 constraints: Sequence[Constraint] = []
                  ) -> None:
         self.puzzle_board: NumBoard = puzzle
-        self.constraints:list[Constraint] = constraints
+        self.constraints:Sequence[Constraint] = constraints
         self.tuf_board: TufBoard = np.zeros((9, 9, 9), dtype=np.int8) # 0->Unknown; 1->true; -1->false
 
         # self.tuf_board[self.puzzle_board != 0] = -1

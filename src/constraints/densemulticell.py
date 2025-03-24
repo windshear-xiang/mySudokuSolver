@@ -1,6 +1,7 @@
 import numpy as np
 from functools import lru_cache
 from itertools import product
+from typing import Sequence
 from src.utils.type_definitions import *
 from . import Constraint
 
@@ -12,7 +13,7 @@ class DenseMultiCellConstraint(Constraint):
     The method `available_candidates` will be implemented automatically.
     '''
 
-    def __init__(self, ls: list[Position]) -> None:
+    def __init__(self, ls: Sequence[Position]) -> None:
         self.cell_positions = np.array(ls).astype(np.intp)
         self.cell_nums = len(ls)
         self.rows = self.cell_positions[:, 0]
