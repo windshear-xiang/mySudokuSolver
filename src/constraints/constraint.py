@@ -1,5 +1,5 @@
 '''
-This module provide the abstract base class `Constraint` for constraints applied on Sudoku
+This module provide the abstract base class `Constraint` and  for constraints applied on Sudoku
 '''
 
 from abc import ABC, abstractmethod

@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.constraints.base import Constraint
+from src.constraints import Constraint
 from src.utils.type_definitions import *
 
 class SolvingBoard:

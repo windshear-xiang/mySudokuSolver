@@ -3,7 +3,7 @@ import time
 import copy
 import sys
 from src.utils.type_definitions import *
-from src.constraints.base import Constraint
+from src.constraints import Constraint
 from .solvingboard import SolvingBoard
 
 class Sudoku:

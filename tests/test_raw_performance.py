@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import sys
 import pytest
-from src.solver.sudoku import Sudoku
+from src.solver import Sudoku
 
 
 def convert_to_matrix(sudoku_str):

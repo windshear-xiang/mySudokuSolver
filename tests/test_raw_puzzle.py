@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from src.solver.sudoku import Sudoku
+from src.solver import Sudoku
 
 def test_solve_1():
     puzzle = np.array([
