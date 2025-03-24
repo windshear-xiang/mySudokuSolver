@@ -175,6 +175,7 @@ class Sudoku:
         return
 
     def print_true_candidates(self):
+        res = []
         for i in range(9):
-            print([[n+1 for n in range(9) if self.tuf_board[i,j,n] == 1] for j in range(9)])
-        return
+            res.append([[n+1 for n in range(9) if self.tuf_board[i,j,n] == 1] for j in range(9)])
+        return res
