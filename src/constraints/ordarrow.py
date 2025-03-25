@@ -1,4 +1,8 @@
-from src.utils.ordinal import Ordinal
+import numpy as np
+import time
+from itertools import product
+from numba import njit
+from src.utils.ordinal import Ordinal, digit2ord
 from . import DenseMultiCellConstraint
 
 class OrdArrowConstraint(DenseMultiCellConstraint):
@@ -15,17 +19,24 @@ class OrdArrowConstraint(DenseMultiCellConstraint):
         return self.cell_positions[self.sum_len:]
     
     def is_valid(self, assigned_board):
-        board_sum = 0
-        board_prod = 1
-        for (i,j) in self.sum_pos_list:
-            if assigned_board[i][j] == 0:
-                return True
-            else:
-                board_sum += Ordinal.digit2ord(assigned_board[i][j])
-        for (i,j) in self.prod_pos_list:
-            if assigned_board[i][j] == 0:
-                return True
-            else:
-                board_prod *= Ordinal.digit2ord(assigned_board[i][j])
-        return board_sum == board_prod
-    
+        return _numba_is_valid(assigned_board, self.sum_pos_list, self.prod_pos_list)
+
+@njit(nogil=True)
+def _numba_is_valid(assigned_board, sum_pos_list, prod_pos_list):
+    board_sum = Ordinal([0])
+    board_prod = Ordinal([1])
+    sum_range = len(sum_pos_list)
+    for i in range(sum_range):
+        x,y = sum_pos_list[i]
+        if assigned_board[x][y] == 0:
+            return True
+        else:
+            board_sum = board_sum + digit2ord(assigned_board[x][y])
+    prod_range = len(prod_pos_list)
+    for i in range(prod_range):
+        x,y = prod_pos_list[i]
+        if assigned_board[x][y] == 0:
+            return True
+        else:
+            board_prod = board_prod * digit2ord(assigned_board[x][y])
+    return board_sum == board_prod

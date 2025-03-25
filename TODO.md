@@ -46,6 +46,7 @@ git push origin main
   + [x] 加入多种constraints
     + [x] 做测试
   + [ ] 重写第4代核心代码，全部用numba加速
+    + [x] numba优化Ordinal，做成jitclass 
     + [ ] nogil优化
     + [ ] 优先查unknown，或者随机化，避免卡死在无解情况
     + [x] np.ascontiguousarray【放弃，太麻烦了】

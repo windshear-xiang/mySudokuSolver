@@ -4,9 +4,9 @@ from threading import Lock, Thread
 import time
 from src.solver import Sudoku
 from src.constraints import KillerConstraint, OrdArrowConstraint
-from src.utils.ordinal import Ordinal
+from src.utils.ordinal import Ordinal, digit2ord
 
-displayer = str
+displayer = digit2ord
 
 class SudokuUI:
     def __init__(self, s: Sudoku):
@@ -134,22 +134,21 @@ def run():
     # ])
     # s = Sudoku(puzzle1, [])
 
-    # puzzle = np.array([
-    # [9, 0, 0, 0, 0, 0, 0, 0, 0],
-    # [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    # [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    # [0, 2, 0, 0, 1, 0, 0, 0, 3],
-    # [0, 1, 0, 0, 0, 0, 0, 6, 0],
-    # [0, 0, 0, 4, 0, 0, 0, 7, 0],
-    # [7, 0, 8, 6, 0, 0, 0, 0, 0],
-    # [0, 0, 0, 0, 3, 0, 1, 0, 0],
-    # [4, 0, 0, 0, 0, 0, 2, 0, 0]
-    # ])
-    # sum_pos_list = [(1,1), (1,2), (1,3), (1,4)]
-    # prod_pos_list = [(1,5)]
-    # Sudoku.reset_counter()
-    # s = Sudoku(puzzle, [OrdArrowConstraint(sum_pos_list, prod_pos_list)])
-    # displayer = Ordinal.digit2ord
+    puzzle = np.array([
+    [9, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 2, 0, 0, 1, 0, 0, 0, 3],
+    [0, 1, 0, 0, 0, 0, 0, 6, 0],
+    [0, 0, 0, 4, 0, 0, 0, 7, 0],
+    [7, 0, 8, 6, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 3, 0, 1, 0, 0],
+    [4, 0, 0, 0, 0, 0, 2, 0, 0]
+    ])
+    sum_pos_list = [(1,1), (1,2), (1,3), (1,4)]
+    prod_pos_list = [(1,5)]
+    Sudoku.reset_counter()
+    s = Sudoku(puzzle, [OrdArrowConstraint(sum_pos_list, prod_pos_list)])
 
     # puzzle = np.array([
     #     [9, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -168,21 +167,21 @@ def run():
     # s = Sudoku(puzzle, [OrdArrowConstraint(sum_pos_list, prod_pos_list)])
     # displayer = Ordinal.digit2ord
 
-    puzzle = np.array([
-        [9, 4, 0, 0, 0, 0, 0, 0, 8],
-        [0, 0, 0, 0, 0, 0, 5, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 2, 0, 0, 1, 0, 0, 0, 3],
-        [0, 1, 0, 0, 0, 0, 0, 6, 0],
-        [0, 0, 0, 4, 0, 0, 0, 7, 0],
-        [7, 0, 8, 6, 0, 0, 0, 0, 0],
-        [2, 0, 0, 0, 3, 0, 0, 0, 1],
-        [4, 0, 0, 0, 0, 0, 2, 0, 0]
-    ])
-    pos_list = [(1,1), (1,2), (1,3), (2,3), (2,4), (2,5)]
-    killer_sum = 26
-    Sudoku.reset_counter()
-    s = Sudoku(puzzle, [KillerConstraint(pos_list, killer_sum), KillerConstraint([(1,8), (2,8)], 10)])
+    # puzzle = np.array([
+    #     [9, 4, 0, 0, 0, 0, 0, 0, 8],
+    #     [0, 0, 0, 0, 0, 0, 5, 0, 0],
+    #     [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    #     [0, 2, 0, 0, 1, 0, 0, 0, 3],
+    #     [0, 1, 0, 0, 0, 0, 0, 6, 0],
+    #     [0, 0, 0, 4, 0, 0, 0, 7, 0],
+    #     [7, 0, 8, 6, 0, 0, 0, 0, 0],
+    #     [2, 0, 0, 0, 3, 0, 0, 0, 1],
+    #     [4, 0, 0, 0, 0, 0, 2, 0, 0]
+    # ])
+    # pos_list = [(1,1), (1,2), (1,3), (2,3), (2,4), (2,5)]
+    # killer_sum = 26
+    # Sudoku.reset_counter()
+    # s = Sudoku(puzzle, [KillerConstraint(pos_list, killer_sum), KillerConstraint([(1,8), (2,8)], 10)])
 
     print("time =", Sudoku.get_counter_stat()[1], '\n')
 
