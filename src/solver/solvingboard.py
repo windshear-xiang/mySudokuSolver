@@ -100,39 +100,49 @@ class SolvingBoard:
         
     def quickdrops(self):
 
-        things_to_drop = 1
+        checked = 0
 
-        while things_to_drop > 0:
-            things_to_drop = 0
-
+        while True:
             # unique cand cells
             unique_positions = np.argwhere(np.sum(self.candidates_board, axis=2) == 1)
-            things_to_drop += len(unique_positions)
+            checked += len(unique_positions) == 0
             for i, j in unique_positions:
+                checked = 0
                 num = self.candidates_board[i,j].argmax()
                 succ = self.settle((i, j), num+1)
                 if not succ:
                     return False
+            
+            if checked >= 3:
+                break
                 
             # uniqueness in row
             row_x_nums = np.argwhere(np.sum(self.candidates_board, axis=1) == 1)
-            things_to_drop += len(row_x_nums)
+            checked += len(row_x_nums) == 0
             for i, num in row_x_nums:
+                checked = 0
                 j = self.candidates_board[i, :, num].argmax()
                 # Note that `num` ranges 0-8
                 succ = self.settle((i, j), num+1)
                 if not succ:
                     return False
             
+            if checked >= 3:
+                break
+            
             # uniqueness in col
             col_x_nums = np.argwhere(np.sum(self.candidates_board, axis=0) == 1)
-            things_to_drop += len(col_x_nums)
+            checked += len(col_x_nums) == 0
             for j, num in col_x_nums:
+                checked = 0
                 i = self.candidates_board[:, j, num].argmax()
                 # Note that `num` ranges 0-8
                 succ = self.settle((i, j), num+1)
                 if not succ:
                     return False
+            
+            if checked >= 3:
+                break
             
         return True
     

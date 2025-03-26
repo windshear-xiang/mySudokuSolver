@@ -49,9 +49,9 @@ git push origin main
     + [x] numba优化Ordinal，做成jitclass
     + [ ] 用viztracer发现的优化目标
       + settle每次有一多半时间耗在最后的检查上
-      + sum 和 argwhere 都很耗时，argmin特别快
+      + sum 和 argwhere 都很耗时，argmin特别快【argmin需要搭配any，也慢】
       + deepcopy的耗时和一次settle差不多，可能有点大, get_least_cands也差不多
-      + quick_drop会多做很多次检查
+      + [x] quick_drop会多做很多次检查，优化了
       + deepcopy有时候会过长，可能是在等内存分配？
       + constraints已经高度优化了
     + [ ] nogil优化
