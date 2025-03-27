@@ -50,10 +50,10 @@ git push origin main
     + [x] numba优化Ordinal，做成jitclass
       + [x] numba传列表的warning问题解决一下【只发生在预编译时】
     + [x] 用viztracer发现优化目标
-      + [ ] settle每次有一多半时间耗在最后的检查上，可以numba优化
-      + [ ] sum 和 argwhere 都很耗时，argmin特别快（但是需要搭配any，也慢），可以numba优化
+      + [x] settle每次有一多半时间耗在最后的检查上，可以numba优化
+      + [x] sum 和 argwhere 都很耗时，argmin特别快（但是需要搭配any，也慢），可以numba优化
       + deepcopy的耗时和一次settle差不多，可能有点大
-      + [ ] get_least_cands也差不多慢，可以numba优化
+      + [x] get_least_cands也差不多慢，可以numba优化
       + [x] quick_drop会多做很多次检查，优化逻辑
     + [ ] constraints已经高度优化了，preprocess可以加速
   + [ ] 优先查unknown，或者随机化，避免卡死在无解情况
