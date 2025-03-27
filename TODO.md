@@ -45,20 +45,23 @@ git push origin main
   + [x] 写一个好测试
   + [x] 加入多种constraints
     + [x] 做测试
-  + [ ] 重写第4代核心代码，全部用numba加速
-    + [x] numba优化Ordinal，做成jitclass
-    + [ ] 用viztracer发现的优化目标
-      + settle每次有一多半时间耗在最后的检查上
-      + sum 和 argwhere 都很耗时，argmin特别快【argmin需要搭配any，也慢】
-      + deepcopy的耗时和一次settle差不多，可能有点大, get_least_cands也差不多
-      + [x] quick_drop会多做很多次检查，优化了
-      + deepcopy有时候会过长，可能是在等内存分配？
-      + constraints已经高度优化了
-    + [ ] nogil优化
-    + [ ] 优先查unknown，或者随机化，避免卡死在无解情况
+  + 核心代码用numba加速
     + [x] np.ascontiguousarray【放弃，太麻烦了】
-    + [ ] 并行
-    + [ ] 做记忆化，如果已经知道了某种局面会无解，就不必再往下搜了
-  + [ ] 加GUI
-    + [x] 临时显示的旧GUI加上
-    + [ ] 完整功能GUI
+    + [x] numba优化Ordinal，做成jitclass
+      + [ ] 传列表的warning问题解决一下
+    + [x] 用viztracer发现优化目标
+      + [ ] settle每次有一多半时间耗在最后的检查上，可以numba优化
+      + [ ] sum 和 argwhere 都很耗时，argmin特别快（但是需要搭配any，也慢），可以numba优化
+      + deepcopy的耗时和一次settle差不多，可能有点大
+      + [ ] get_least_cands也差不多慢，可以numba优化
+      + [x] quick_drop会多做很多次检查，优化逻辑
+    + [ ] constraints已经高度优化了，preprocess可以加速
+  + [ ] 优先查unknown，或者随机化，避免卡死在无解情况
+  + [ ] 多进程的solve_true_candidate
+  + [ ] 做记忆化，如果已经知道了某种局面会无解，就不必再往下搜了？
+  + [ ] 要不要用numba整个重写solve_step方法？
+    + [ ] nogil优化，多线程并行
++ [ ] 完整功能GUI
+  + [x] 临时显示的旧GUI加上
+  + [ ] 手动设定数字的功能，再加上可以随时撤销
+  + [ ] 手动设定constraints的功能
