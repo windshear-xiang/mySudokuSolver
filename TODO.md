@@ -48,7 +48,7 @@ git push origin main
   + 核心代码用numba加速
     + [x] np.ascontiguousarray【放弃，太麻烦了】
     + [x] numba优化Ordinal，做成jitclass
-      + [ ] 传列表的warning问题解决一下
+      + [x] numba传列表的warning问题解决一下【只发生在预编译时】
     + [x] 用viztracer发现优化目标
       + [ ] settle每次有一多半时间耗在最后的检查上，可以numba优化
       + [ ] sum 和 argwhere 都很耗时，argmin特别快（但是需要搭配any，也慢），可以numba优化
@@ -57,6 +57,7 @@ git push origin main
       + [x] quick_drop会多做很多次检查，优化逻辑
     + [ ] constraints已经高度优化了，preprocess可以加速
   + [ ] 优先查unknown，或者随机化，避免卡死在无解情况
+  + [ ] 修整一下DenseMulticellConstraints等等类里乱七八糟的对象，少用列表
   + [ ] 多进程的solve_true_candidate
   + [ ] 做记忆化，如果已经知道了某种局面会无解，就不必再往下搜了？
   + [ ] 要不要用numba整个重写solve_step方法？

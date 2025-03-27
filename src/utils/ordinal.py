@@ -108,23 +108,5 @@ def print_board_in_ord(board):
         print("--+----+----+----+----+----+----+----+----+----+")
     return
 
-# for i in range(1, 10):
-#     print(digit2ord(i))
-
-# print(f"{Ordinal([0,2])} * {Ordinal([0,1])} = {Ordinal([0,2]) * Ordinal([0,1])}")
-# print(f"{Ordinal([0,2])} * 2 = {Ordinal([0,2]) * 2}")
-# print(f"{Ordinal([0,2,1])} * {Ordinal([0,1])} = {Ordinal([0,2,1]) * Ordinal([0,1])}")
-# print(f"{Ordinal([0,2])} * {Ordinal([0,1,2])} = {Ordinal([0,2]) * Ordinal([0,1,2])}")
-
-for i in range(1, 10):
-    a = digit2ord(i)
-
-a = Ordinal([0,2]) * Ordinal([0,1])
-a = Ordinal([0,2]) * 2
-a = Ordinal([0,2,1]) * Ordinal([0,1])
-a = Ordinal([0,2]) * Ordinal([0,1,2])
-
-a = Ordinal([0,2]) + Ordinal([0,1])
-a = Ordinal([0,2]) + 2
-a = Ordinal([0,2,1]) + Ordinal([0,1])
-a = Ordinal([0,2]) + Ordinal([0,1,2])
+# 导入模块时强行预编译
+_ = digit2ord(6) + Ordinal(np.array([0,2])) * Ordinal(np.array([0,1,2]))
