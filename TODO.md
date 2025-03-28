@@ -55,7 +55,7 @@ git push origin main
       + deepcopy的耗时和一次settle差不多，可能有点大
       + [x] get_least_cands也差不多慢，可以numba优化
       + [x] quick_drop会多做很多次检查，优化逻辑
-    + [ ] constraints已经高度优化了，preprocess可以加速
+    + [x] constraints已经高度优化了，preprocess可以numba加速
   + [ ] 优先查unknown，或者随机化，避免卡死在无解情况
   + [ ] 修整一下DenseMulticellConstraints等等类里乱七八糟的对象，少用列表
   + [ ] 多进程的solve_true_candidate

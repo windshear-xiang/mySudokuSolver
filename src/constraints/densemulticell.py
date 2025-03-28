@@ -41,10 +41,7 @@ class DenseMultiCellConstraint(Constraint):
         return
     
     def available_candidates(self, assigned_board: NumBoard) -> CandBoard:
-        # return super().available_candidates(assigned_board)
         values = assigned_board[self.rows, self.cols]
-        # if np.all(values > 0):
-        #     return super().available_candidates(assigned_board)
         return self.valuetuple_to_candboard(tuple(values))
 
     @lru_cache(maxsize=None)
