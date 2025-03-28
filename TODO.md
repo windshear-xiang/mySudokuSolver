@@ -58,6 +58,7 @@ git push origin main
     + [x] constraints已经高度优化了，preprocess可以numba加速
   + [ ] 优先查unknown，或者随机化，避免卡死在无解情况
   + [ ] 修整一下DenseMulticellConstraints等等类里乱七八糟的对象，少用列表
+    + [ ] 能否实现一个统一的numba优化的DenseMulticellConstraints的preprocess？
   + [ ] 多进程的solve_true_candidate
   + [ ] 做记忆化，如果已经知道了某种局面会无解，就不必再往下搜了？
   + [ ] 要不要用numba整个重写solve_step方法？
