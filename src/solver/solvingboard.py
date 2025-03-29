@@ -31,7 +31,7 @@ class SolvingBoard:
         for (i, j), num in zip(zip(rows, cols), nums):
             succ = self.settle((i, j), num)
             if not succ:
-                raise Exception(f"Sudoku puzzle is incompatible at {i,j}.")
+                raise Exception(f"Sudoku puzzle is incompatible.")
     
     def __str__(self) -> str:
         return self.assigned_board.__str__()
@@ -90,7 +90,7 @@ class SolvingBoard:
                 succ = self.settle((i, j), num+1)
                 if not succ:
                     return False
-            if checked >= 3:
+            if checked >= 4:
                 break
                 
             # uniqueness in row
@@ -101,7 +101,7 @@ class SolvingBoard:
                 succ = self.settle((i, j), num+1)
                 if not succ:
                     return False
-            if checked >= 3:
+            if checked >= 4:
                 break
             
             # uniqueness in col
@@ -112,9 +112,19 @@ class SolvingBoard:
                 succ = self.settle((i, j), num+1)
                 if not succ:
                     return False
-            if checked >= 3:
+            if checked >= 4:
                 break
-            
+
+            # uniqueness in blocks
+            i, j, num =_numba_find_uniqueness_in_block(self.candidates_board)
+            checked += 1
+            if num >= 0:
+                checked = 0
+                succ = self.settle((i, j), num+1)
+                if not succ:
+                    return False
+            if checked >= 4:
+                break
         return True
 
 @njit
@@ -136,7 +146,6 @@ def _numba_get_least_cand_pos(candidates_board, assigned_board):
                 mini = i
                 minj = j
     return minv, (mini, minj)
-
 
 @njit
 def _numba_settle(candidates_board, assigned_board, x, y, num):
@@ -238,4 +247,29 @@ def _numba_find_uniqueness_in_col(candidates_board):
                 unqcand = cand
                 return unqi, unqj, unqcand
     return -1, -1, -1
-    
+
+@njit
+def _numba_find_uniqueness_in_block(candidates_board):
+    unqi = -1
+    unqj = -1
+    unqcand = -1
+    for xb in range(0, 7, 3):
+        for yb in range(0, 7, 3):
+            for cand in range(9):
+                curr_sum = 0
+                jump_flag = False
+                for i in range(xb, xb+3):
+                    if jump_flag:
+                        break
+                    for j in range(yb, yb+3):
+                        if candidates_board[i, j, cand]:
+                            curr_sum += 1
+                            unqi = i
+                            unqj = j
+                            if curr_sum > 1:
+                                jump_flag = True
+                                break
+                if curr_sum == 1:
+                    unqcand = cand
+                    return unqi, unqj, unqcand
+    return -1, -1, -1

@@ -1,1 +1,1 @@
-from .sudoku import Sudoku
+from .sudoku import Sudoku, has_conflict

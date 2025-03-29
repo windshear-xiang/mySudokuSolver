@@ -52,10 +52,11 @@ git push origin main
     + [x] 用viztracer发现优化目标
       + [x] settle每次有一多半时间耗在最后的检查上，可以numba优化
       + [x] sum 和 argwhere 都很耗时，argmin特别快（但是需要搭配any，也慢），可以numba优化
-      + deepcopy的耗时和一次settle差不多，可能有点大
+      + [ ] deepcopy的耗时和一次settle差不多，可能有点大，怎么办？
       + [x] get_least_cands也差不多慢，可以numba优化
       + [x] quick_drop会多做很多次检查，优化逻辑
     + [x] constraints已经高度优化了，preprocess可以numba加速
+  + [x] 修改了算法，加上了uniqueness in blocks
   + [ ] 优先查unknown，或者随机化，避免卡死在无解情况
   + [ ] 修整一下DenseMulticellConstraints等等类里乱七八糟的对象，少用列表
     + [ ] 能否实现一个统一的numba优化的DenseMulticellConstraints的preprocess？
@@ -66,5 +67,9 @@ git push origin main
 + [ ] 完整功能GUI
   + [x] 临时显示的旧GUI加上
   + [x] 手动设定数字的功能
-  + [ ] 可以随时撤销求解
+  + [x] 修复会卡死的bug，用queue重写
+  + [x] 可以随时中止求解
+  + [x] 加上不断自动计算
+  + [ ] 解决最后会认为无解的bug，应该是因为返回棋盘的settle全0
+  + [ ] 可以保存和读取棋盘的功能
   + [ ] 手动设定constraints的功能
