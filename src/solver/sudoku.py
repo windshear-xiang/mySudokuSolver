@@ -180,3 +180,11 @@ class Sudoku:
         for i in range(9):
             res.append([[n+1 for n in range(9) if self.tuf_board[i,j,n] == 1] for j in range(9)])
         return res
+    
+    def after_add(self):
+        '''加入新的数字/constraint之后，之前正确的可能错，但是之前错的肯定还错'''
+        self.tuf_board[self.tuf_board == 1] = 0
+    
+    def after_del(self):
+        '''删除已有的数字/constraint之后，之前正确的还正确，但是之前错的可能对'''
+        self.tuf_board[self.tuf_board == -1] = 0
