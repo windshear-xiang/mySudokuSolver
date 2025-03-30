@@ -2,16 +2,22 @@ import tkinter as tk
 import numpy as np
 import threading
 import queue
-import time
 import json
 from tkinter import filedialog
 from src.solver import Sudoku
-from src.constraints import *
+from src.utils.ordinal import digit2ord
+from src.constraints import Constraint
+from src.utils.type_definitions import *
 
 REFRESH_TIME_INTERVAL = 100
 
+DIGIT_TO_ORD_STR = {n: str(digit2ord(n)) for n in range(1, 10)}
+
 class SudokuUI:
-    def __init__(self) -> None:
+    def __init__(self,
+                 puzzle_board: NumBoard = np.zeros((9, 9), dtype=np.int8),
+                 constraints: list[Constraint] = []
+                 ) -> None:
         self.root = tk.Tk()
         self.root.title("Sudoku Solver")
 
@@ -23,11 +29,11 @@ class SudokuUI:
         self.display_as_ord = tk.BooleanVar(value=False) # 序数显示模式
 
         # 当前显示的棋盘
-        self.curr_puzzle_board = np.zeros((9, 9), dtype=np.int8)
+        self.curr_puzzle_board = puzzle_board
         self.curr_tuf_board = np.zeros((9, 9, 9), dtype=np.int8)
 
         # Constraints
-        self.constraint = []
+        self.constraints = constraints
 
         # 多线程工具
         self.out_q = queue.Queue()
@@ -79,20 +85,24 @@ class SudokuUI:
 
         # 日志显示框（用于显示文字信息）
         self.log_label = tk.Label(self.side_frame, text="LOG")
-        self.log_label.pack(side=tk.TOP, anchor='w', padx=5, pady=(20, 5))
-
-        self.log_text = tk.Text(self.side_frame, width=35, height=25, state=tk.DISABLED)
+        self.log_label.pack(side=tk.TOP, anchor='w', padx=5, pady=(20, 0))
+        self.log_text = tk.Text(self.side_frame, width=45, height=20, state=tk.DISABLED)
         self.log_text.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
 
         # 新增 constraints 显示框，放在日志显示框下面
-        self.constraint_text = tk.Text(self.side_frame, width=35, height=10, state=tk.DISABLED)
+        self.constraint_label = tk.Label(self.side_frame, text="Constraints")
+        self.constraint_label.pack(side=tk.TOP, anchor='w', padx=5, pady=(20, 0))
+        self.constraint_text = tk.Text(self.side_frame, width=45, height=20, state=tk.DISABLED)
         self.constraint_text.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         # 绑定键盘事件（全局绑定，编辑状态下处理数字和删除操作）
         self.root.bind("<Key>", self.on_key_pressed)
-        
+
         # 初始刷新界面
         self.root.after(REFRESH_TIME_INTERVAL, self.check_update)
+
+        # 重新输出constraints
+        self._print_constraints()
     
     def save_file(self):
         self.log("[main]: 试图储存当前棋盘")
@@ -225,6 +235,7 @@ class SudokuUI:
             self.root.after(REFRESH_TIME_INTERVAL, self.check_update)
     
     def update_display(self):
+        # 画格子内容
         for i in range(9):
             for j in range(9):
                 canvas = self.cells[i][j]
@@ -247,14 +258,21 @@ class SudokuUI:
                     self._highlight_cell(canvas)
     
     def _draw_assigned_number(self, canvas: tk.Canvas, number: int):
-        canvas.create_text(45, 45, text=str(number), font=('Arial', 40), fill='black')
+        if self.display_as_ord.get():
+            canvas.create_text(45, 45, text=DIGIT_TO_ORD_STR[number], font=('Arial', 26), fill='black')
+        else:
+            canvas.create_text(45, 45, text=str(number), font=('Arial', 40), fill='black')
     
     def _draw_big_number(self, canvas: tk.Canvas, number: int):
-        canvas.create_text(45, 45, text=str(number), font=('Arial', 40), fill='blue')
+        if self.display_as_ord.get():
+            canvas.create_text(45, 45, text=DIGIT_TO_ORD_STR[number], font=('Arial', 26), fill='blue')
+        else:
+            canvas.create_text(45, 45, text=str(number), font=('Arial', 40), fill='blue')
         
     def _draw_small_grid(self, canvas: tk.Canvas, cell_data: np.ndarray):
         # 无解情况
         if np.all(cell_data == -1):
+            canvas.create_text(45, 45, text='X', font=('Arial', 40), fill='red')
             return
         for num in range(1, 10):
             idx = num - 1
@@ -269,7 +287,12 @@ class SudokuUI:
                 color = 'blue'
             else:
                 color = '#cccccc'
-            canvas.create_text(x, y, text=str(num), font=('Arial', 10), fill=color)
+            if self.display_as_ord.get():
+                if num == 8:
+                    x += 5
+                canvas.create_text(x+3, y+3, text=DIGIT_TO_ORD_STR[num], font=('Arial', 9), fill=color)
+            else:
+                canvas.create_text(x, y, text=str(num), font=('Arial', 12), fill=color)
     
     def stop_solver(self):
         self.log("[main]: 试图停止求解器")
@@ -286,7 +309,7 @@ class SudokuUI:
         # 构造数独对象
         s = Sudoku(
             self.curr_puzzle_board,
-            self.constraint,
+            self.constraints,
             self.out_q,
             self.stop_event
             )
@@ -323,28 +346,16 @@ class SudokuUI:
             self.log_text.see(tk.END)
             self.log_text.configure(state=tk.DISABLED) # 注意切换状态
         self.root.after(0, append)
+    
+    def _print_constraints(self):
+        self.constraint_text.configure(state=tk.NORMAL) # 注意切换状态
+        self.constraint_text.delete("1.0", tk.END) # 清空之前的
+        for c in self.constraints:
+            self.constraint_text.insert(tk.END, c.info + "\n")
+        self.constraint_text.see(tk.END)
+        self.constraint_text.configure(state=tk.DISABLED) # 注意切换状态
 
-def run():
-    ui = SudokuUI()
-
-    ui.curr_puzzle_board = np.array([
-        [9, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 2, 0, 0, 1, 0, 0, 0, 3],
-        [0, 1, 0, 0, 0, 0, 0, 6, 0],
-        [0, 0, 0, 4, 0, 0, 0, 7, 0],
-        [7, 0, 8, 6, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 3, 0, 1, 0, 0],
-        [4, 0, 0, 0, 0, 0, 2, 0, 0]
-    ])
-
-    sum_pos_list = [(1,1), (1,2), (1,3), (1,4)]
-    prod_pos_list = [(1,5)]
-    oac = OrdArrowConstraint(sum_pos_list, prod_pos_list)
-    ui.constraint = [oac]
-
-    # ui.root.after(100, ui.start_solver)
-
+def run(puzzle_board, constraints):
+    ui = SudokuUI(puzzle_board, constraints)
     ui.root.mainloop()
     

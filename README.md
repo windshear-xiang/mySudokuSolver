@@ -11,3 +11,5 @@ Run in the root directory of this project:
 ```bash
 python -m src
 ```
+
+Modify `src/config.py` to setup the puzzle and the constraints

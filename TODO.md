@@ -74,5 +74,7 @@ git push origin main
   + [x] 解决最后会认为无解的bug，应该是因为返回棋盘的settle全0
     + 直接从全0搜吧，这样可以避免很多bug
   + [x] 可以保存和读取棋盘的功能
-  + [ ] 优化代码结构，以及显示constraints的功能
+  + [x] 序数显示功能
+  + [x] 优化代码结构，以及显示constraints的功能
+  + [ ] 分离preprocess到数独内部，并且加入储存
   + [ ] 手动设定constraints的功能

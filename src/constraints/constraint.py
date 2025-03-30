@@ -10,8 +10,12 @@ class Constraint(ABC):
     '''
     Base class for constraints applied on Sudoku.
 
-    Subclasses must implement `is_valid`.
+    Subclasses must implement `is_valid` and `info`.
     '''
+
+    @property
+    def info(self) -> str:
+        raise NotImplementedError
     
     @abstractmethod
     def is_valid(self, assigned_board: NumBoard) -> bool:
