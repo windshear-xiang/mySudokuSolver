@@ -3,6 +3,8 @@ import numpy as np
 import threading
 import queue
 import time
+import json
+from tkinter import filedialog
 from src.solver import Sudoku
 from src.constraints import *
 
@@ -18,6 +20,7 @@ class SudokuUI:
         self.editable = True # 棋盘可编辑状态
         self.selected_cell = None # 当前选中的格子 (i, j)
         self.always_solve_var = tk.BooleanVar(value=False) # 自动求解模式
+        self.display_as_ord = tk.BooleanVar(value=False) # 序数显示模式
 
         # 当前显示的棋盘
         self.curr_puzzle_board = np.zeros((9, 9), dtype=np.int8)
@@ -52,19 +55,33 @@ class SudokuUI:
         self.control_frame.pack(side=tk.TOP, padx=5, pady=5, fill=tk.X)
 
         # 添加 “Always Solve” 勾选框，放在第一列
-        self.always_solve_cb = tk.Checkbutton(self.control_frame, text="Always Solve", variable=self.always_solve_var)
+        self.always_solve_cb = tk.Checkbutton(self.control_frame, text="Auto Solve", variable=self.always_solve_var)
         self.always_solve_cb.grid(row=0, column=0, padx=5)
 
-        # 修改原来 True Candidates 按钮
-        self.solve_button = tk.Button(self.control_frame, text="True Candidates", command=self.start_solver)
-        self.solve_button.grid(row=0, column=1, padx=5)
+        # 序数显示的按钮
+        self.always_solve_cb = tk.Checkbutton(self.control_frame, text="Display as Ordinal", variable=self.display_as_ord)
+        self.always_solve_cb.grid(row=0, column=1, padx=5)
 
-        # 在 True Candidates 按钮右边新增 Stop 按钮（先不绑定功能，预留接口）
-        self.stop_button = tk.Button(self.control_frame, text="Stop", command=self.stop_solver)
-        self.stop_button.grid(row=0, column=2, padx=5)
+        # 修改原来 True Candidates 按钮
+        self.solve_button = tk.Button(self.control_frame, text="Solve True Candidates", command=self.start_solver)
+        self.solve_button.grid(row=1, column=0, padx=5)
+
+        # 在 True Candidates 按钮右边新增 Stop 按钮
+        self.stop_button = tk.Button(self.control_frame, text="Force Stop", command=self.stop_solver)
+        self.stop_button.grid(row=1, column=1, padx=5)
+
+        # 在控制区下方增加一行，用于 "Save" 和 "Load" 按钮
+        self.save_button = tk.Button(self.control_frame, text="Save", command=self.save_file)
+        self.save_button.grid(row=2, column=0, padx=5, pady=20)
+
+        self.load_button = tk.Button(self.control_frame, text="Load", command=self.load_file)
+        self.load_button.grid(row=2, column=1, padx=5, pady=20)
 
         # 日志显示框（用于显示文字信息）
-        self.log_text = tk.Text(self.side_frame, width=35, height=30, state=tk.NORMAL)
+        self.log_label = tk.Label(self.side_frame, text="LOG")
+        self.log_label.pack(side=tk.TOP, anchor='w', padx=5, pady=(20, 5))
+
+        self.log_text = tk.Text(self.side_frame, width=35, height=25, state=tk.DISABLED)
         self.log_text.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
 
         # 新增 constraints 显示框，放在日志显示框下面
@@ -77,6 +94,52 @@ class SudokuUI:
         # 初始刷新界面
         self.root.after(REFRESH_TIME_INTERVAL, self.check_update)
     
+    def save_file(self):
+        self.log("[main]: 试图储存当前棋盘")
+        board_state = {
+            "curr_puzzle_board": self.curr_puzzle_board.tolist(),
+            "curr_tuf_board": self.curr_tuf_board.tolist()
+        }
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".json",
+            filetypes=[("JSON Files", "*.json"), ("All Files", "*.*")],
+            title="Save current board as JSON"
+        )
+        if not file_path:
+            self.log("[main]: 用户取消储存操作")
+            return
+
+        # 保存数据到 JSON 文件中
+        try:
+            with open(file_path, 'w', encoding='utf-8') as file:
+                json.dump(board_state, file, indent=None)
+                self.log("[main]: 棋盘已保存到 " + file_path)
+        except Exception as e:
+            self.log("[main]: " + str(e))
+            self.log("[main]: 保存失败")
+    
+    def load_file(self):
+        self.log("[main]: 试图读取棋盘")
+        file_path = filedialog.askopenfilename(
+            defaultextension=".json",
+            filetypes=[("JSON Files", "*.json"), ("All Files", "*.*")],
+            title="Load current board from JSON"
+        )
+        if not file_path:
+            self.log("[main]: 用户取消读取操作")
+            return
+
+        # 读取 JSON 文件中的数据
+        try:
+            with open(file_path, 'r', encoding='utf-8') as file:
+                board_state = json.load(file)
+                self.curr_puzzle_board = np.array(board_state["curr_puzzle_board"], dtype=np.int8)
+                self.curr_tuf_board = np.array(board_state["curr_tuf_board"], dtype=np.int8)
+                self.log("[main]: 已读取 " + file_path)
+        except Exception as e:
+            self.log("[main]: " + str(e))
+            self.log("[main]: 读取失败")
+
     def _draw_cell_borders(self, canvas, i, j):
         # 清除并重绘单元格边框
         canvas.delete('all')
@@ -153,7 +216,7 @@ class SudokuUI:
                     self.solving = False
                     self.editable = True
                 else:
-                    self.log("[main]: 接收到求解中间结果")
+                    self.log("[main]: 接收到中间结果")
                     self.curr_tuf_board = out
         except queue.Empty:
             pass
@@ -239,12 +302,13 @@ class SudokuUI:
             self.log("[worker]: 开始求解")
             s.solve_true_candidates()
         except InterruptedError:
-            self.log("[worker]: 求解被中止")
+            self.log("[worker]: 求解已被中止")
         except Exception as e:
             self.log("[worker]: " + str(e))
         else:
             self.out_q.put(s.tuf_board.copy())
-            self.log("[worker]: Solver finished.")
+            sc, ct = Sudoku.get_counter_stat()
+            self.log(f"[worker]: 求解完成. {sc}次 {ct:.3f}s")
         finally:
             self.out_q.put(None)
         
@@ -254,8 +318,10 @@ class SudokuUI:
         为了线程安全，这里用 after 方法在主线程中更新 Text 控件
         """
         def append():
+            self.log_text.configure(state=tk.NORMAL) # 注意切换状态
             self.log_text.insert(tk.END, message + "\n")
             self.log_text.see(tk.END)
+            self.log_text.configure(state=tk.DISABLED) # 注意切换状态
         self.root.after(0, append)
 
 def run():
