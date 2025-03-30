@@ -2,14 +2,23 @@ import tkinter as tk
 import numpy as np
 import threading
 import queue
+import json_tricks as json
 import time
+from tkinter import filedialog
 from src.solver import Sudoku
-from src.constraints import *
+from src.utils.ordinal import digit2ord
+from src.constraints import Constraint
+from src.utils.type_definitions import *
 
 REFRESH_TIME_INTERVAL = 100
 
+DIGIT_TO_ORD_STR = {n: str(digit2ord(n)) for n in range(1, 10)}
+
 class SudokuUI:
-    def __init__(self) -> None:
+    def __init__(self,
+                 puzzle_board: NumBoard = np.zeros((9, 9), dtype=np.int8),
+                 constraints: list[Constraint] = []
+                 ) -> None:
         self.root = tk.Tk()
         self.root.title("Sudoku Solver")
 
@@ -18,13 +27,14 @@ class SudokuUI:
         self.editable = True # 棋盘可编辑状态
         self.selected_cell = None # 当前选中的格子 (i, j)
         self.always_solve_var = tk.BooleanVar(value=False) # 自动求解模式
+        self.display_as_ord = tk.BooleanVar(value=False) # 序数显示模式
 
         # 当前显示的棋盘
-        self.curr_puzzle_board = np.zeros((9, 9), dtype=np.int8)
+        self.curr_puzzle_board = puzzle_board
         self.curr_tuf_board = np.zeros((9, 9, 9), dtype=np.int8)
 
         # Constraints
-        self.constraint = []
+        self.constraints = constraints
 
         # 多线程工具
         self.out_q = queue.Queue()
@@ -52,31 +62,97 @@ class SudokuUI:
         self.control_frame.pack(side=tk.TOP, padx=5, pady=5, fill=tk.X)
 
         # 添加 “Always Solve” 勾选框，放在第一列
-        self.always_solve_cb = tk.Checkbutton(self.control_frame, text="Always Solve", variable=self.always_solve_var)
+        self.always_solve_cb = tk.Checkbutton(self.control_frame, text="Auto Solve", variable=self.always_solve_var)
         self.always_solve_cb.grid(row=0, column=0, padx=5)
 
-        # 修改原来 True Candidates 按钮
-        self.solve_button = tk.Button(self.control_frame, text="True Candidates", command=self.start_solver)
-        self.solve_button.grid(row=0, column=1, padx=5)
+        # 序数显示的按钮
+        self.always_solve_cb = tk.Checkbutton(self.control_frame, text="Display as Ordinal", variable=self.display_as_ord)
+        self.always_solve_cb.grid(row=0, column=1, padx=5)
 
-        # 在 True Candidates 按钮右边新增 Stop 按钮（先不绑定功能，预留接口）
-        self.stop_button = tk.Button(self.control_frame, text="Stop", command=self.stop_solver)
-        self.stop_button.grid(row=0, column=2, padx=5)
+        # 修改原来 True Candidates 按钮
+        self.solve_button = tk.Button(self.control_frame, text="Solve True Candidates", command=self.start_solver)
+        self.solve_button.grid(row=1, column=0, padx=5)
+
+        # 在 True Candidates 按钮右边新增 Stop 按钮
+        self.stop_button = tk.Button(self.control_frame, text="Force Stop", command=self.stop_solver)
+        self.stop_button.grid(row=1, column=1, padx=5)
+
+        # 在控制区下方增加一行，用于 "Save" 和 "Load" 按钮
+        self.save_button = tk.Button(self.control_frame, text="Save", command=self.save_file)
+        self.save_button.grid(row=2, column=0, padx=5, pady=20)
+
+        self.load_button = tk.Button(self.control_frame, text="Load", command=self.load_file)
+        self.load_button.grid(row=2, column=1, padx=5, pady=20)
 
         # 日志显示框（用于显示文字信息）
-        self.log_text = tk.Text(self.side_frame, width=35, height=30, state=tk.NORMAL)
+        self.log_label = tk.Label(self.side_frame, text="LOG")
+        self.log_label.pack(side=tk.TOP, anchor='w', padx=5, pady=(20, 0))
+        self.log_text = tk.Text(self.side_frame, width=45, height=20, state=tk.DISABLED)
         self.log_text.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
 
         # 新增 constraints 显示框，放在日志显示框下面
-        self.constraint_text = tk.Text(self.side_frame, width=35, height=10, state=tk.DISABLED)
+        self.constraint_label = tk.Label(self.side_frame, text="Constraints")
+        self.constraint_label.pack(side=tk.TOP, anchor='w', padx=5, pady=(20, 0))
+        self.constraint_text = tk.Text(self.side_frame, width=45, height=20, state=tk.DISABLED)
         self.constraint_text.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         # 绑定键盘事件（全局绑定，编辑状态下处理数字和删除操作）
         self.root.bind("<Key>", self.on_key_pressed)
-        
+
         # 初始刷新界面
         self.root.after(REFRESH_TIME_INTERVAL, self.check_update)
+
+        # 重新输出constraints
+        self._print_constraints()
     
+    def save_file(self):
+        self.log("[main]: 试图储存当前棋盘")
+        board_state = {
+            "curr_puzzle_board": self.curr_puzzle_board,
+            "curr_tuf_board": self.curr_tuf_board,
+            "constraints": self.constraints
+        }
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".json",
+            filetypes=[("JSON Files", "*.json"), ("All Files", "*.*")],
+            title="Save current board as JSON"
+        )
+        if not file_path:
+            self.log("[main]: 用户取消储存操作")
+            return
+
+        # 保存数据到 JSON 文件中
+        try:
+            with open(file_path, 'w', encoding='utf-8') as file:
+                json.dump(board_state, file, indent=None)
+                self.log("[main]: 棋盘已保存到 " + file_path)
+        except Exception as e:
+            self.log("[main]: " + str(e))
+            self.log("[main]: 保存失败")
+    
+    def load_file(self):
+        self.log("[main]: 试图读取棋盘")
+        file_path = filedialog.askopenfilename(
+            defaultextension=".json",
+            filetypes=[("JSON Files", "*.json"), ("All Files", "*.*")],
+            title="Load current board from JSON"
+        )
+        if not file_path:
+            self.log("[main]: 用户取消读取操作")
+            return
+
+        # 读取 JSON 文件中的数据
+        try:
+            with open(file_path, 'r', encoding='utf-8') as file:
+                board_state = json.load(file)
+                self.curr_puzzle_board = board_state["curr_puzzle_board"]
+                self.curr_tuf_board = board_state["curr_tuf_board"]
+                self.constraints = board_state["constraints"]
+                self.log("[main]: 已读取 " + file_path)
+        except Exception as e:
+            self.log("[main]: " + str(e))
+            self.log("[main]: 读取失败")
+
     def _draw_cell_borders(self, canvas, i, j):
         # 清除并重绘单元格边框
         canvas.delete('all')
@@ -153,7 +229,7 @@ class SudokuUI:
                     self.solving = False
                     self.editable = True
                 else:
-                    self.log("[main]: 接收到求解中间结果")
+                    self.log("[main]: 接收到中间结果")
                     self.curr_tuf_board = out
         except queue.Empty:
             pass
@@ -162,6 +238,7 @@ class SudokuUI:
             self.root.after(REFRESH_TIME_INTERVAL, self.check_update)
     
     def update_display(self):
+        # 画格子内容
         for i in range(9):
             for j in range(9):
                 canvas = self.cells[i][j]
@@ -184,14 +261,21 @@ class SudokuUI:
                     self._highlight_cell(canvas)
     
     def _draw_assigned_number(self, canvas: tk.Canvas, number: int):
-        canvas.create_text(45, 45, text=str(number), font=('Arial', 40), fill='black')
+        if self.display_as_ord.get():
+            canvas.create_text(45, 45, text=DIGIT_TO_ORD_STR[number], font=('Arial', 26), fill='black')
+        else:
+            canvas.create_text(45, 45, text=str(number), font=('Arial', 40), fill='black')
     
     def _draw_big_number(self, canvas: tk.Canvas, number: int):
-        canvas.create_text(45, 45, text=str(number), font=('Arial', 40), fill='blue')
+        if self.display_as_ord.get():
+            canvas.create_text(45, 45, text=DIGIT_TO_ORD_STR[number], font=('Arial', 26), fill='blue')
+        else:
+            canvas.create_text(45, 45, text=str(number), font=('Arial', 40), fill='blue')
         
     def _draw_small_grid(self, canvas: tk.Canvas, cell_data: np.ndarray):
         # 无解情况
         if np.all(cell_data == -1):
+            canvas.create_text(45, 45, text='X', font=('Arial', 40), fill='red')
             return
         for num in range(1, 10):
             idx = num - 1
@@ -206,7 +290,12 @@ class SudokuUI:
                 color = 'blue'
             else:
                 color = '#cccccc'
-            canvas.create_text(x, y, text=str(num), font=('Arial', 10), fill=color)
+            if self.display_as_ord.get():
+                if num == 8:
+                    x += 5
+                canvas.create_text(x+3, y+3, text=DIGIT_TO_ORD_STR[num], font=('Arial', 9), fill=color)
+            else:
+                canvas.create_text(x, y, text=str(num), font=('Arial', 12), fill=color)
     
     def stop_solver(self):
         self.log("[main]: 试图停止求解器")
@@ -214,7 +303,7 @@ class SudokuUI:
 
     def start_solver(self):
         if self.solving == True:
-            self.log("[main]: 正在求解，请稍等")
+            self.log("[main]: 正在求解中，请稍等")
             return
         
         self.solving = True
@@ -223,28 +312,37 @@ class SudokuUI:
         # 构造数独对象
         s = Sudoku(
             self.curr_puzzle_board,
-            self.constraint,
+            self.constraints,
             self.out_q,
             self.stop_event
             )
         # s.tuf_board = self.curr_tuf_board.copy()
         # 启动求解线程
+        self.log("[main]: 启动worker...")
         solver_thread = threading.Thread(target=self.worker, args=(s,), daemon=True)
         solver_thread.start()
 
     def worker(self, s: Sudoku):
         self.log("[worker]: worker被调用")
-        Sudoku.reset_counter()
         try:
+            for i, constraint in enumerate(s.constraints):
+                if not getattr(constraint, "preprocessed_flag", True):
+                    self.log(f"[worker]: 正在预处理 {i}:{type(constraint).__name__}")
+                    time_counter = time.perf_counter()
+                    getattr(constraint, "preprocess").__call__()
+                    setattr(constraint, "preprocessed_flag", True)
+                    self.log(f"[worker]: {i} 预处理完成. {time.perf_counter()-time_counter:.3f}s")
             self.log("[worker]: 开始求解")
+            Sudoku.reset_counter()
             s.solve_true_candidates()
         except InterruptedError:
-            self.log("[worker]: 求解被中止")
+            self.log("[worker]: 求解已被中止")
         except Exception as e:
             self.log("[worker]: " + str(e))
         else:
             self.out_q.put(s.tuf_board.copy())
-            self.log("[worker]: Solver finished.")
+            sc, ct = Sudoku.get_counter_stat()
+            self.log(f"[worker]: 求解完成. {sc}次 {ct:.3f}s")
         finally:
             self.out_q.put(None)
         
@@ -254,31 +352,21 @@ class SudokuUI:
         为了线程安全，这里用 after 方法在主线程中更新 Text 控件
         """
         def append():
+            self.log_text.configure(state=tk.NORMAL) # 注意切换状态
             self.log_text.insert(tk.END, message + "\n")
             self.log_text.see(tk.END)
+            self.log_text.configure(state=tk.DISABLED) # 注意切换状态
         self.root.after(0, append)
+    
+    def _print_constraints(self):
+        self.constraint_text.configure(state=tk.NORMAL) # 注意切换状态
+        self.constraint_text.delete("1.0", tk.END) # 清空之前的
+        for c in self.constraints:
+            self.constraint_text.insert(tk.END, c.info + "\n")
+        self.constraint_text.see(tk.END)
+        self.constraint_text.configure(state=tk.DISABLED) # 注意切换状态
 
-def run():
-    ui = SudokuUI()
-
-    ui.curr_puzzle_board = np.array([
-        [9, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 2, 0, 0, 1, 0, 0, 0, 3],
-        [0, 1, 0, 0, 0, 0, 0, 6, 0],
-        [0, 0, 0, 4, 0, 0, 0, 7, 0],
-        [7, 0, 8, 6, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 3, 0, 1, 0, 0],
-        [4, 0, 0, 0, 0, 0, 2, 0, 0]
-    ])
-
-    sum_pos_list = [(1,1), (1,2), (1,3), (1,4)]
-    prod_pos_list = [(1,5)]
-    oac = OrdArrowConstraint(sum_pos_list, prod_pos_list)
-    ui.constraint = [oac]
-
-    # ui.root.after(100, ui.start_solver)
-
+def run(puzzle_board, constraints):
+    ui = SudokuUI(puzzle_board, constraints)
     ui.root.mainloop()
     

@@ -33,6 +33,7 @@ git push origin main
   + [x] 把特殊规则做成缩减candidate：先预处理，然后在每次以及settle的时候，都会调用。
     + [x] 记忆化
     + [x] 缓存大小 微弱优化，就None吧
+      + 还是加上缓存限制
   + [x] 序数运算规则
   + [x] numba加速
     + 发现numba加速序数计算可以提高预处理速度，is_valid几乎没用，搜索不能加速
@@ -57,6 +58,7 @@ git push origin main
       + [x] quick_drop会多做很多次检查，优化逻辑
     + [x] constraints已经高度优化了，preprocess可以numba加速
   + [x] 修改了算法，加上了uniqueness in blocks
+  + [ ] 计数器改成对象方法和属性，而不是类方法和属性
   + [ ] 优先查unknown，或者随机化，避免卡死在无解情况
   + [ ] 修整一下DenseMulticellConstraints等等类里乱七八糟的对象，少用列表
     + [ ] 能否实现一个统一的numba优化的DenseMulticellConstraints的preprocess？
@@ -72,5 +74,9 @@ git push origin main
   + [x] 加上不断自动计算
   + [x] 解决最后会认为无解的bug，应该是因为返回棋盘的settle全0
     + 直接从全0搜吧，这样可以避免很多bug
-  + [ ] 可以保存和读取棋盘的功能
+  + [x] 可以保存和读取棋盘的功能
+  + [x] 序数显示功能
+  + [x] 优化代码结构，以及显示constraints的功能
+  + [x] 分离preprocess到数独内部，并且加入储存
+  + [ ] 压缩储存，稀疏矩阵？
   + [ ] 手动设定constraints的功能

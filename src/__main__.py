@@ -1,3 +1,4 @@
 from src.ui.app import run
+from src.config import CONFIG_PUZZLE_BOARD, CONFIG_CONSTRAINTS
 
-run()
+run(CONFIG_PUZZLE_BOARD, CONFIG_CONSTRAINTS)
