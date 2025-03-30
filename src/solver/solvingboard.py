@@ -1,5 +1,6 @@
 import numpy as np
 from typing import Sequence
+from numba import njit
 from src.constraints import Constraint
 from src.utils.type_definitions import *
 
@@ -21,6 +22,7 @@ class SolvingBoard:
                  puzzle: NumBoard,
                  possible_cands: CandBoard
                  ) -> None:
+        '''注意__init__很慢，没有优化过，尽量少用'''
         self.assigned_board: NumBoard = np.zeros((9,9), dtype=np.int8)
         self.candidates_board: CandBoard = possible_cands
         
@@ -29,7 +31,7 @@ class SolvingBoard:
         for (i, j), num in zip(zip(rows, cols), nums):
             succ = self.settle((i, j), num)
             if not succ:
-                    raise Exception(f"Sudoku puzzle is incompatible at {i,j}.")
+                raise Exception(f"Sudoku puzzle is incompatible.")
     
     def __str__(self) -> str:
         return self.assigned_board.__str__()
@@ -50,35 +52,16 @@ class SolvingBoard:
         assert num != 0
         x, y = pos
 
-        if self.candidates_board[x,y,num-1] != True:
+        succ = _numba_settle(self.candidates_board, self.assigned_board, x, y, num)
+        if not succ:
             return False
 
-        # if already settled
-        if self.assigned_board[x, y] == num:
-            return True
-        elif self.assigned_board[x, y] != 0:
-            return False
-
-        # Settle
-        self.assigned_board[x, y] = num
-        self.candidates_board[x, y, :] = False
-
-        # Eliminate row & col candidates
-        self.candidates_board[x, :, num-1] = False
-        self.candidates_board[:, y, num-1] = False
-        # Eliminate block candidates
-        xb = (x // 3) * 3
-        yb = (y // 3) * 3
-        self.candidates_board[xb:xb+3, yb:yb+3, num-1] = False
         # Eliminate candidates in accordance with constraints
         for constraint in SolvingBoard.constraints:
             self.candidates_board &= constraint.available_candidates(self.assigned_board)
 
         # Check if there's enough candidates
-        if np.any(np.all(self.candidates_board == False, axis=2) & (self.assigned_board == 0)):
-            return False
-
-        return True
+        return _numba_check_after_settle(self.candidates_board, self.assigned_board)
     
     def get_least_cand_pos(self) -> tuple[int, Position | None]:
         '''
@@ -89,50 +72,204 @@ class SolvingBoard:
 
         Return `(0, None)` if there's no unassigned cell.
         '''
-        assigned = self.assigned_board != 0
-        if np.all(assigned):
+        cand_count, (i, j) = _numba_get_least_cand_pos(self.candidates_board, self.assigned_board)
+        if cand_count == 10:
             return 0, None
-        cand_counts = np.sum(self.candidates_board, axis=2)
-        cand_counts[assigned] = 10  # replace assigned position with 10, which is bigger than any other cell
-        i, j = np.unravel_index(np.argmin(cand_counts), (9, 9))
-        cand_count = cand_counts[i, j]
         return cand_count, (i, j)
         
     def quickdrops(self):
 
-        things_to_drop = 1
+        checked = 0
 
-        while things_to_drop > 0:
-            things_to_drop = 0
-
+        while True:
             # unique cand cells
-            unique_positions = np.argwhere(np.sum(self.candidates_board, axis=2) == 1)
-            things_to_drop += len(unique_positions)
-            for i, j in unique_positions:
-                num = self.candidates_board[i,j].argmax()
+            i, j, num =_numba_find_unique_position(self.candidates_board)
+            checked += 1
+            if num >= 0:
+                checked = 0
                 succ = self.settle((i, j), num+1)
                 if not succ:
                     return False
+            if checked >= 4:
+                break
                 
             # uniqueness in row
-            row_x_nums = np.argwhere(np.sum(self.candidates_board, axis=1) == 1)
-            things_to_drop += len(row_x_nums)
-            for i, num in row_x_nums:
-                j = self.candidates_board[i, :, num].argmax()
-                # Note that `num` ranges 0-8
+            i, j, num =_numba_find_uniqueness_in_row(self.candidates_board)
+            checked += 1
+            if num >= 0:
+                checked = 0
                 succ = self.settle((i, j), num+1)
                 if not succ:
                     return False
+            if checked >= 4:
+                break
             
             # uniqueness in col
-            col_x_nums = np.argwhere(np.sum(self.candidates_board, axis=0) == 1)
-            things_to_drop += len(col_x_nums)
-            for j, num in col_x_nums:
-                i = self.candidates_board[:, j, num].argmax()
-                # Note that `num` ranges 0-8
+            i, j, num =_numba_find_uniqueness_in_col(self.candidates_board)
+            checked += 1
+            if num >= 0:
+                checked = 0
                 succ = self.settle((i, j), num+1)
                 if not succ:
                     return False
-            
+            if checked >= 4:
+                break
+
+            # uniqueness in blocks
+            i, j, num =_numba_find_uniqueness_in_block(self.candidates_board)
+            checked += 1
+            if num >= 0:
+                checked = 0
+                succ = self.settle((i, j), num+1)
+                if not succ:
+                    return False
+            if checked >= 4:
+                break
         return True
+
+@njit
+def _numba_get_least_cand_pos(candidates_board, assigned_board):
+    minv = 10
+    mini = 0
+    minj = 0
+    for i in range(9):
+        for j in range(9):
+            if assigned_board[i, j] != 0:
+                continue
+            curr_sum = 0
+            for cand in range(9):
+                curr_sum += candidates_board[i, j, cand]
+                if curr_sum >= minv:
+                    break
+            if curr_sum < minv:
+                minv = curr_sum
+                mini = i
+                minj = j
+    return minv, (mini, minj)
+
+@njit
+def _numba_settle(candidates_board, assigned_board, x, y, num):
     
+    if candidates_board[x,y,num-1] != True:
+        return False
+
+    # if already settled
+    if assigned_board[x, y] == num:
+        return True
+    elif assigned_board[x, y] != 0:
+        return False
+
+    # Settle
+    assigned_board[x, y] = num
+    candidates_board[x, y, :] = False
+
+    # Eliminate row & col candidates
+    candidates_board[x, :, num-1] = False
+    candidates_board[:, y, num-1] = False
+    # Eliminate block candidates
+    xb = (x // 3) * 3
+    yb = (y // 3) * 3
+    candidates_board[xb:xb+3, yb:yb+3, num-1] = False
+
+    return True
+
+@njit
+def _numba_check_after_settle(candidates_board, assigned_board):
+    for i in range(9):
+        for j in range(9):
+            if assigned_board[i, j] != 0:
+                continue
+            no_cand_flag = True
+            for num in range(9):
+                if candidates_board[i, j, num] == True:
+                    no_cand_flag = False
+                    continue
+            if no_cand_flag:
+                return False
+    return True
+
+@njit
+def _numba_find_unique_position(candidates_board):
+    unqi = -1
+    unqj = -1
+    unqcand = -1
+    for i in range(9):
+        for j in range(9):
+            curr_sum = 0
+            for cand in range(9):
+                if candidates_board[i, j, cand]:
+                    curr_sum += 1
+                    unqcand = cand
+                    if curr_sum > 1:
+                        break
+            if curr_sum == 1:
+                unqi = i
+                unqj = j
+                return unqi, unqj, unqcand
+    return -1, -1, -1
+
+@njit
+def _numba_find_uniqueness_in_row(candidates_board):
+    unqi = -1
+    unqj = -1
+    unqcand = -1
+    for i in range(9):
+        for cand in range(9):
+            curr_sum = 0
+            for j in range(9):
+                if candidates_board[i, j, cand]:
+                    curr_sum += 1
+                    unqj = j
+                    if curr_sum > 1:
+                        break
+            if curr_sum == 1:
+                unqi = i
+                unqcand = cand
+                return unqi, unqj, unqcand
+    return -1, -1, -1
+
+@njit
+def _numba_find_uniqueness_in_col(candidates_board):
+    unqi = -1
+    unqj = -1
+    unqcand = -1
+    for j in range(9):
+        for cand in range(9):
+            curr_sum = 0
+            for i in range(9):
+                if candidates_board[i, j, cand]:
+                    curr_sum += 1
+                    unqi = i
+                    if curr_sum > 1:
+                        break
+            if curr_sum == 1:
+                unqj = j
+                unqcand = cand
+                return unqi, unqj, unqcand
+    return -1, -1, -1
+
+@njit
+def _numba_find_uniqueness_in_block(candidates_board):
+    unqi = -1
+    unqj = -1
+    unqcand = -1
+    for xb in range(0, 7, 3):
+        for yb in range(0, 7, 3):
+            for cand in range(9):
+                curr_sum = 0
+                jump_flag = False
+                for i in range(xb, xb+3):
+                    if jump_flag:
+                        break
+                    for j in range(yb, yb+3):
+                        if candidates_board[i, j, cand]:
+                            curr_sum += 1
+                            unqi = i
+                            unqj = j
+                            if curr_sum > 1:
+                                jump_flag = True
+                                break
+                if curr_sum == 1:
+                    unqcand = cand
+                    return unqi, unqj, unqcand
+    return -1, -1, -1

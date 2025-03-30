@@ -1,6 +1,9 @@
 # IDE vscode
 .vscode/
 
+# vistracer results
+result.json
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

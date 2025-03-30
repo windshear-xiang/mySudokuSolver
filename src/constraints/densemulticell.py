@@ -1,4 +1,5 @@
 import numpy as np
+import time
 from functools import lru_cache
 from itertools import product
 from typing import Sequence
@@ -25,6 +26,7 @@ class DenseMultiCellConstraint(Constraint):
     def preprocess(self) -> None:
         print("Preprocessing...")
         combo_count = 0
+        time_counter = time.perf_counter()
 
         temp_board = np.zeros((9, 9), dtype=np.int8)
         for combo in product(range(1, 10), repeat=self.cell_nums):
@@ -35,14 +37,11 @@ class DenseMultiCellConstraint(Constraint):
                 self.valid_combinations[indices] = True
                 combo_count += 1
         
-        print(f"Preprocessed. combo_count={combo_count}")
+        print(f"Preprocessed. combo_count={combo_count}. time={time.perf_counter() - time_counter:.6f}")
         return
     
     def available_candidates(self, assigned_board: NumBoard) -> CandBoard:
-        # return super().available_candidates(assigned_board)
         values = assigned_board[self.rows, self.cols]
-        # if np.all(values > 0):
-        #     return super().available_candidates(assigned_board)
         return self.valuetuple_to_candboard(tuple(values))
 
     @lru_cache(maxsize=None)
