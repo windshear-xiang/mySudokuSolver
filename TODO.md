@@ -52,7 +52,7 @@ git push origin main
     + [x] 用viztracer发现优化目标
       + [x] settle每次有一多半时间耗在最后的检查上，可以numba优化
       + [x] sum 和 argwhere 都很耗时，argmin特别快（但是需要搭配any，也慢），可以numba优化
-      + [ ] deepcopy的耗时和一次settle差不多，可能有点大，怎么办？
+      + [x] deepcopy的耗时和一次settle差不多，可能有点大，怎么办？
       + [x] get_least_cands也差不多慢，可以numba优化
       + [x] quick_drop会多做很多次检查，优化逻辑
     + [x] constraints已经高度优化了，preprocess可以numba加速
@@ -64,12 +64,13 @@ git push origin main
   + [ ] 做记忆化，如果已经知道了某种局面会无解，就不必再往下搜了？
   + [ ] 要不要用numba整个重写solve_step方法？
     + [ ] nogil优化，多线程并行
-+ [ ] 完整功能GUI
++ 完整功能GUI
   + [x] 临时显示的旧GUI加上
   + [x] 手动设定数字的功能
   + [x] 修复会卡死的bug，用queue重写
   + [x] 可以随时中止求解
   + [x] 加上不断自动计算
-  + [ ] 解决最后会认为无解的bug，应该是因为返回棋盘的settle全0
+  + [x] 解决最后会认为无解的bug，应该是因为返回棋盘的settle全0
+    + 直接从全0搜吧，这样可以避免很多bug
   + [ ] 可以保存和读取棋盘的功能
   + [ ] 手动设定constraints的功能

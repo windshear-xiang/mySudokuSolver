@@ -5,6 +5,7 @@ import sys
 import threading
 import queue
 from typing import Optional, Sequence
+
 from src.utils.type_definitions import *
 from src.constraints import Constraint
 from .solvingboard import SolvingBoard
@@ -99,8 +100,14 @@ class Sudoku:
         i,j = curr_solving_pos
         curr_cand_list = np.flatnonzero(curr_sol.candidates_board[i,j]) + 1
 
+        restore_assigned_board = curr_sol.assigned_board
+        restore_cand_board = curr_sol.candidates_board
+
         for candidate in curr_cand_list:
-            next_sol = copy.deepcopy(curr_sol)
+
+            curr_sol.assigned_board = restore_assigned_board.copy()
+            curr_sol.candidates_board = restore_cand_board.copy()
+            next_sol = curr_sol
 
             if not next_sol.settle(curr_solving_pos, candidate):
                 continue
