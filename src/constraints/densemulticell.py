@@ -14,16 +14,23 @@ class DenseMultiCellConstraint(Constraint):
     The method `available_candidates` will be implemented automatically.
     '''
 
-    def __init__(self, ls: Sequence[Position]) -> None:
+    def __init__(self, ls: Sequence[Position], prep_at_init: bool = True) -> None:
         self.cell_positions = np.array(ls).astype(np.intp)
         self.cell_nums = len(ls)
         self.rows = self.cell_positions[:, 0]
         self.cols = self.cell_positions[:, 1]
 
         self.valid_combinations = np.zeros((9,) * self.cell_nums, dtype=np.bool_)
-        self.preprocess()
+
+        self.preprocessed_flag = False
+
+        if prep_at_init == True:
+            self.preprocess()
+            self.preprocessed_flag = True
+        
     
     def preprocess(self) -> None:
+        '''这个方法有可能被子类重写，不要在这里改 `self.precrocessed_flag` '''
         print("Preprocessing...")
         combo_count = 0
         time_counter = time.perf_counter()
@@ -41,10 +48,13 @@ class DenseMultiCellConstraint(Constraint):
         return
     
     def available_candidates(self, assigned_board: NumBoard) -> CandBoard:
+        if not self.preprocessed_flag:
+            self.preprocess()
+            self.preprocessed_flag = True
         values = assigned_board[self.rows, self.cols]
         return self.valuetuple_to_candboard(tuple(values))
 
-    @lru_cache(maxsize=None)
+    @lru_cache(maxsize=4096)
     def valuetuple_to_candboard(self, values: tuple) -> CandBoard:
         cand_board = np.ones((9, 9, 9), dtype=np.bool_)
         slices = []

@@ -2,7 +2,8 @@ import tkinter as tk
 import numpy as np
 import threading
 import queue
-import json
+import json_tricks as json
+import time
 from tkinter import filedialog
 from src.solver import Sudoku
 from src.utils.ordinal import digit2ord
@@ -107,8 +108,9 @@ class SudokuUI:
     def save_file(self):
         self.log("[main]: 试图储存当前棋盘")
         board_state = {
-            "curr_puzzle_board": self.curr_puzzle_board.tolist(),
-            "curr_tuf_board": self.curr_tuf_board.tolist()
+            "curr_puzzle_board": self.curr_puzzle_board,
+            "curr_tuf_board": self.curr_tuf_board,
+            "constraints": self.constraints
         }
         file_path = filedialog.asksaveasfilename(
             defaultextension=".json",
@@ -143,8 +145,9 @@ class SudokuUI:
         try:
             with open(file_path, 'r', encoding='utf-8') as file:
                 board_state = json.load(file)
-                self.curr_puzzle_board = np.array(board_state["curr_puzzle_board"], dtype=np.int8)
-                self.curr_tuf_board = np.array(board_state["curr_tuf_board"], dtype=np.int8)
+                self.curr_puzzle_board = board_state["curr_puzzle_board"]
+                self.curr_tuf_board = board_state["curr_tuf_board"]
+                self.constraints = board_state["constraints"]
                 self.log("[main]: 已读取 " + file_path)
         except Exception as e:
             self.log("[main]: " + str(e))
@@ -300,7 +303,7 @@ class SudokuUI:
 
     def start_solver(self):
         if self.solving == True:
-            self.log("[main]: 正在求解，请稍等")
+            self.log("[main]: 正在求解中，请稍等")
             return
         
         self.solving = True
@@ -315,14 +318,22 @@ class SudokuUI:
             )
         # s.tuf_board = self.curr_tuf_board.copy()
         # 启动求解线程
+        self.log("[main]: 启动worker...")
         solver_thread = threading.Thread(target=self.worker, args=(s,), daemon=True)
         solver_thread.start()
 
     def worker(self, s: Sudoku):
         self.log("[worker]: worker被调用")
-        Sudoku.reset_counter()
         try:
+            for i, constraint in enumerate(s.constraints):
+                if not getattr(constraint, "preprocessed_flag", True):
+                    self.log(f"[worker]: 正在预处理 {i}:{type(constraint).__name__}")
+                    time_counter = time.perf_counter()
+                    getattr(constraint, "preprocess").__call__()
+                    setattr(constraint, "preprocessed_flag", True)
+                    self.log(f"[worker]: {i} 预处理完成. {time.perf_counter()-time_counter:.3f}s")
             self.log("[worker]: 开始求解")
+            Sudoku.reset_counter()
             s.solve_true_candidates()
         except InterruptedError:
             self.log("[worker]: 求解已被中止")

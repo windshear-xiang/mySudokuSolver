@@ -5,9 +5,9 @@ from src.utils.ordinal import Ordinal, digit2ord
 from . import DenseMultiCellConstraint
 
 class OrdArrowConstraint(DenseMultiCellConstraint):
-    def __init__(self, sum_pos_list: list, prod_pos_list: list):
+    def __init__(self, sum_pos_list: list, prod_pos_list: list, prep_at_init: bool = True):
         self.sum_len = len(sum_pos_list)
-        super().__init__(sum_pos_list + prod_pos_list)
+        super().__init__(sum_pos_list + prod_pos_list, prep_at_init=prep_at_init)
 
     @property
     def sum_pos_list(self):

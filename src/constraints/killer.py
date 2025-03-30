@@ -6,9 +6,9 @@ from . import DenseMultiCellConstraint
 from src.utils.type_definitions import *
 
 class KillerConstraint(DenseMultiCellConstraint):
-    def __init__(self, ls: Sequence[Position], killer_sum: int) -> None:
+    def __init__(self, ls: Sequence[Position], killer_sum: int, prep_at_init: bool = True) -> None:
         self.killer_sum = killer_sum
-        super().__init__(ls)
+        super().__init__(ls, prep_at_init=prep_at_init)
     
     @property
     def info(self) -> str:
