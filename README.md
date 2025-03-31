@@ -4,16 +4,30 @@
 
 A sudoku solver implemented by python
 
-## Install dependencies
+## 安装依赖 Install dependencies
 
-### Use Conda
+可以使用 `conda` 或 `pip` 中的任意一种
+
+### 1. 用 conda 安装 (推荐)
 
 ```bash
 conda env create -f environment.yml
-conda activate sudoku_env
+conda activate mySudokuSolver_env
 ```
 
-### Use pip
+### 2. 用 pip 安装
+
+Make sure `python>=3.11`
+
+#### 使用 venv (可选)
+
+```bash
+python -m venv venv
+venv\Scripts\activate # Windows
+# source venv/bin/activate # Linux/macOS 
+```
+
+#### 安装依赖
 
 ```bash
 pip install -r requirements.txt
@@ -27,4 +41,4 @@ Run in the root directory of this project:
 python -m src
 ```
 
-Modify `src/config.py` to setup the puzzle and the constraints
+你可以修改 `src/config.py` 中的 `CONFIG_PUZZLE_BOARD` 和 `CONFIG_CONSTRAINTS` 这两个常量，它们分别代表了app启动时使用的背景谜题Puzzle和外加限制规则Constraints列表。
