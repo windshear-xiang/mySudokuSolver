@@ -11,7 +11,7 @@ from .solvingboard import SolvingBoard
 
 
 # 至少要间隔这么久才会输出中间结果
-OUTPUT_TIME_INTERVAL = 0.1
+OUTPUT_TIME_INTERVAL = 0.2
 
 X_INDICES, Y_INDICES = np.indices((9,9))
 
@@ -104,17 +104,10 @@ class Sudoku:
         Return `None` if it's unsolvable.
         '''
 
-        # 多线程控制
-        if time.perf_counter() - self.output_timer > OUTPUT_TIME_INTERVAL:
-            if self.out_q is not None and self.stop_event is not None:
-                # 到轮次了，输出
-                self.out_q.put(self.tuf_board.copy())
-                # 让出GIL控制权给UI线程，避免卡死
-                time.sleep(OUTPUT_TIME_INTERVAL / 10)
-                self.output_timer = time.perf_counter()
-                # 被中止了
-                if self.stop_event.is_set():
-                    raise InterruptedError
+        # 多线程控制是否需要中止求解
+        if self.stop_event is not None:
+            if self.stop_event.is_set():
+                raise InterruptedError
 
         self.search_counter += 1
 
@@ -231,6 +224,16 @@ class Sudoku:
                 self.tuf_board[i,j,u_cand] = -1
             self.flush_tuf_count()
             u_count, pos = self.get_least_unknown_cand_pos()
+
+            # 多线程控制 输出中间结果
+            if time.perf_counter() - self.output_timer > OUTPUT_TIME_INTERVAL:
+                if self.out_q is not None:
+                    # 到轮次了，输出
+                    self.out_q.put(self.tuf_board.copy())
+                    # 让出GIL控制权给UI线程，避免卡死
+                    time.sleep(OUTPUT_TIME_INTERVAL / 20)
+                    self.output_timer = time.perf_counter()
+                
         return
     
     def count_tuf_cands(self):
