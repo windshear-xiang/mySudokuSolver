@@ -2,12 +2,12 @@ import tkinter as tk
 import numpy as np
 import threading
 import queue
-import json_tricks as json
 import time
 from tkinter import filedialog
 from src.solver import Sudoku
 from src.utils.ordinal import digit2ord
 from src.constraints import Constraint
+from src.utils.file_utils import save_sudoku, load_sudoku
 from src.utils.type_definitions import *
 
 REFRESH_TIME_INTERVAL = 100
@@ -66,8 +66,8 @@ class SudokuUI:
         self.always_solve_cb.grid(row=0, column=0, padx=5)
 
         # 序数显示的按钮
-        self.always_solve_cb = tk.Checkbutton(self.control_frame, text="Display as Ordinal", variable=self.display_as_ord)
-        self.always_solve_cb.grid(row=0, column=1, padx=5)
+        self.display_as_ord_cb = tk.Checkbutton(self.control_frame, text="Display as Ordinal", variable=self.display_as_ord)
+        self.display_as_ord_cb.grid(row=0, column=1, padx=5)
 
         # 修改原来 True Candidates 按钮
         self.solve_button = tk.Button(self.control_frame, text="Solve True Candidates", command=self.start_solver)
@@ -123,12 +123,12 @@ class SudokuUI:
 
         # 保存数据到 JSON 文件中
         try:
-            with open(file_path, 'w', encoding='utf-8') as file:
-                json.dump(board_state, file, indent=None)
-                self.log("[main]: 棋盘已保存到 " + file_path)
+            save_sudoku(board_state, file_path)
         except Exception as e:
             self.log("[main]: " + str(e))
             self.log("[main]: 保存失败")
+        else:
+            self.log("[main]: 棋盘已保存到 " + file_path)
     
     def load_file(self):
         self.log("[main]: 试图读取棋盘")
@@ -142,16 +142,16 @@ class SudokuUI:
             return
 
         # 读取 JSON 文件中的数据
-        try:
-            with open(file_path, 'r', encoding='utf-8') as file:
-                board_state = json.load(file)
-                self.curr_puzzle_board = board_state["curr_puzzle_board"]
-                self.curr_tuf_board = board_state["curr_tuf_board"]
-                self.constraints = board_state["constraints"]
-                self.log("[main]: 已读取 " + file_path)
+        try:    
+            board_state = load_sudoku(file_path)
+            self.curr_puzzle_board = board_state["curr_puzzle_board"]
+            self.curr_tuf_board = board_state["curr_tuf_board"]
+            self.constraints = board_state["constraints"]
         except Exception as e:
             self.log("[main]: " + str(e))
             self.log("[main]: 读取失败")
+        else:
+            self.log("[main]: 已读取 " + file_path)
 
     def _draw_cell_borders(self, canvas, i, j):
         # 清除并重绘单元格边框

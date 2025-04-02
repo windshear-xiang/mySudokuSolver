@@ -25,7 +25,7 @@ class Sudoku:
         constraints (Sequence[Constraint]): 外加限制规则的列表
         out_q (Queue | None): 多线程通信用的管道，用来放中间输出结果
         stop_event (threading.Event | None): 多线程通信用的事件，用来指示强行需要停止求解
-        output_timer: 多线程通信用的计时器，用来计算距离上次输出中间结果过了多久
+        output_timer: 多线程通信用的计时器，用来记录上次输出中间结果的时间
         search_timer: 搜索用的计时器，用来计算求解耗时
         search_counter: 搜索用的计数器，用来记录搜索步数
     """
@@ -104,11 +104,12 @@ class Sudoku:
         Return `None` if it's unsolvable.
         '''
 
-        # 多线程控制，检查求解是否被强行中止
+        # 多线程控制
         if time.perf_counter() - self.output_timer > OUTPUT_TIME_INTERVAL:
             if self.out_q is not None and self.stop_event is not None:
                 # 到轮次了，输出
                 self.out_q.put(self.tuf_board.copy())
+                # 让出GIL控制权给UI线程，避免卡死
                 time.sleep(OUTPUT_TIME_INTERVAL / 10)
                 self.output_timer = time.perf_counter()
                 # 被中止了
