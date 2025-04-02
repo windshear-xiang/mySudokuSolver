@@ -3,49 +3,64 @@ import time
 import copy
 import sys
 import threading
-import queue
+from queue import Queue
 from typing import Optional, Sequence
-
 from src.utils.type_definitions import *
 from src.constraints import Constraint
 from .solvingboard import SolvingBoard
 
+
+# 至少要间隔这么久才会输出中间结果
 OUTPUT_TIME_INTERVAL = 0.1
 
+X_INDICES, Y_INDICES = np.indices((9,9))
+
+
 class Sudoku:
-    '''The class of a particular sudoku game.'''
+    """The class of a particular sudoku game.
 
-    search_counter = 0
-    time_counter = 0
-
-    x_indices, y_indices = np.indices((9,9))
-
-    @classmethod
-    def reset_counter(cls) -> None:
-        cls.search_counter = 0
-        cls.time_counter = time.perf_counter()
-    
-    @classmethod
-    def get_counter_stat(cls):
-        '''Return a `tuple` of `(search_count, cost_time)`.'''
-        cost_time = time.perf_counter() - cls.time_counter
-        return cls.search_counter, cost_time
+    Attributes:
+        puzzle_board (NumBoard): 谜面的数组
+        tuf_board (TufBoard): 存放 True / Unknown / False candidates的数组。0->Unknown; 1->true; -1->false
+        constraints (Sequence[Constraint]): 外加限制规则的列表
+        out_q (Queue | None): 多线程通信用的管道，用来放中间输出结果
+        stop_event (threading.Event | None): 多线程通信用的事件，用来指示强行需要停止求解
+        output_timer: 多线程通信用的计时器，用来计算距离上次输出中间结果过了多久
+        search_timer: 搜索用的计时器，用来计算求解耗时
+        search_counter: 搜索用的计数器，用来记录搜索步数
+    """
 
     def __init__(self,
                  puzzle: NumBoard,
                  constraints: Sequence[Constraint] = [],
-                 out_q: Optional[queue.Queue] = None,
+                 out_q: Optional[Queue] = None,
                  stop_event: Optional[threading.Event] = None
                  ) -> None:
+        """生成一个 Sudoku 实例对象
+
+        Args:
+            puzzle (NumBoard): 谜面的数组
+            constraints (Sequence[Constraint]): 外加限制规则的列表
+            out_q (Queue | None): 多线程通信用的管道，用来放中间输出结果
+            stop_event (threading.Event | None): 多线程通信用的事件，用来指示强行需要停止求解
+        """
         self.puzzle_board: NumBoard = puzzle
-        self.constraints:Sequence[Constraint] = constraints
-        self.tuf_board: TufBoard = np.zeros((9, 9, 9), dtype=np.int8) # 0->Unknown; 1->true; -1->false
+        self.tuf_board: TufBoard = np.zeros((9, 9, 9), dtype=np.int8)
+        self.constraints: Sequence[Constraint] = constraints
         # 多线程使用的属性
-        self.out_q = out_q
-        self.stop_event = stop_event
-        self.output_timer = time.perf_counter()
+        self.out_q: Optional[Queue] = out_q
+        self.stop_event: Optional[threading.Event] = stop_event
+        self.output_timer: float = time.perf_counter()
+        # 求解的计时器和计数器
+        self.search_timer: float = time.perf_counter()
+        self.search_counter: int = 0
 
     def init_settle(self):
+        """根据 puzzle_board 的情况初始化一下 tuf_board。
+
+        已经填了数的格子，把那个数设置是 1(t)，其他数都是 -1(f)。
+        把同行同列同块这些格子里，相应的数都设置位 -1(f)
+        """
         rows, cols = np.nonzero(self.puzzle_board)
         nums = self.puzzle_board[rows, cols]
         for (i, j), num in zip(zip(rows, cols), nums):
@@ -65,6 +80,21 @@ class Sudoku:
     def tu_board(self):
         return self.tuf_board >= 0
     
+    def reset_counter(self) -> None:
+        """重置求解计时器"""
+        self.search_counter = 0
+        self.search_timer = time.perf_counter()
+    
+    def get_counter_stat(self) -> tuple[int, float]:
+        """读取求解计时器，单位是秒
+        
+        Returns:
+            tuple: (搜索步数, 消耗时间)
+        """
+
+        cost_time = time.perf_counter() - self.search_timer
+        return self.search_counter, cost_time
+    
     def solve_step(self, curr_sol: SolvingBoard) -> SolvingBoard | None:
         '''
         A recursive function. Solve the sudoku for one step and then call itself for the following steps.
@@ -74,7 +104,7 @@ class Sudoku:
         Return `None` if it's unsolvable.
         '''
 
-        # 多线程控制
+        # 多线程控制，检查求解是否被强行中止
         if time.perf_counter() - self.output_timer > OUTPUT_TIME_INTERVAL:
             if self.out_q is not None and self.stop_event is not None:
                 # 到轮次了，输出
@@ -85,7 +115,7 @@ class Sudoku:
                 if self.stop_event.is_set():
                     raise InterruptedError
 
-        Sudoku.search_counter += 1
+        self.search_counter += 1
 
         # If all cells are assigned
         curr_solving_pos = curr_sol.get_least_cand_pos()[1]
@@ -123,15 +153,15 @@ class Sudoku:
         return None
     
     def solve(self, reset_counter = True):
-        '''
-        Solve the sudoku.
-        
+        """求出一个解。
         `self.puzzle_board` will remain untouched.
 
-        Return a `SolvingBoard` object if the puzzle is solved.
+        Args:
+            reset_counter (bool): 是否重置计时器
 
-        Return `None` is the puzzle is not solvable.
-        '''
+        Returns:
+            (SolvingBoard | None): 求出的解，如果无解，返回None
+        """
         SolvingBoard.constraints = self.constraints
         init_sol = SolvingBoard(puzzle=self.puzzle_board, possible_cands=self.tu_board)
         if reset_counter:
@@ -158,9 +188,19 @@ class Sudoku:
         u_count = ucount_board[i, j]
         return u_count, (i, j)
 
-    def solve_true_candidates(self):
+    def solve_true_candidates(self, reset_counter = True):
+        """求解 true candidates
+        直接修改 `self.tuf_board`
 
+        Args:
+            reset_counter (bool): 是否重置计时器
+        """
+
+        # 重置多线程输出计时器
         self.output_timer = time.perf_counter()
+        # 默认重置求解计时器
+        if reset_counter:
+            self.reset_counter()
 
         self.init_settle()
         SolvingBoard.constraints = self.constraints
@@ -184,7 +224,7 @@ class Sudoku:
                         ret_sol = self.solve_step(try_sol)
                         if ret_sol:
                             # candidate is good
-                            self.tuf_board[Sudoku.x_indices, Sudoku.y_indices, ret_sol.assigned_board-1] = 1
+                            self.tuf_board[X_INDICES, Y_INDICES, ret_sol.assigned_board-1] = 1
                             continue
                 # candidate is bad
                 self.tuf_board[i,j,u_cand] = -1
@@ -200,7 +240,8 @@ class Sudoku:
     
     def flush_tuf_count(self):
         t,u,f = self.count_tuf_cands()
-        sys.stdout.write(f"\rUnknown={u} True={t} False={f} in {time.perf_counter()-Sudoku.time_counter:.4f}s   ")
+        steps, times = self.get_counter_stat()
+        sys.stdout.write(f"\rUnknown={u} True={t} False={f}, in {steps}steps {times:.4f}s   ")
         sys.stdout.flush()
         return
 

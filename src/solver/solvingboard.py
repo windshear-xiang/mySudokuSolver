@@ -5,15 +5,17 @@ from src.constraints import Constraint
 from src.utils.type_definitions import *
 
 class SolvingBoard:
-    '''
-    This is an auxiliary class required when solving sudoku.
+    """This is an auxiliary class required when solving sudoku.
 
     Attributes:
-        candidates_board: a 9x9x9 numpy ndarray, each indicate whether on a specific posisiton a specific number is available (`True` -> available; `False` -> unavailable). Note the index is `0-8`.
-        assigned_board: a 9x9 numpy ndarray, each indicate the number assigned on the posisiton. `0` means not assigned.
+        constraints: 
+            **[类属性]** 作用于当前数独的外加限制规则，需要从外部手工指定
+        candidates_board:
+            a 9x9x9 numpy ndarray, each indicate whether on a specific posisiton a specific number is available (`True` -> available; `False` -> unavailable). Note the index is `0-8`.
+        assigned_board:
+            a 9x9 numpy ndarray, each indicate the number assigned on the posisiton. `0` means not assigned.
     
-    constraints 需要手工指定
-    '''
+    """
 
     __slots__ = ("candidates_board", "assigned_board",)
     constraints: Sequence[Constraint] = []
@@ -22,7 +24,12 @@ class SolvingBoard:
                  puzzle: NumBoard,
                  possible_cands: CandBoard
                  ) -> None:
-        '''注意__init__很慢，没有优化过，尽量少用'''
+        """生成一个 `SolvingBoard` 对象
+
+        注意 `SolvingBoard` 的 `__init__ 很慢，没有优化过。
+
+        另外 `__init__` 不会对类属性 `constraints` 做任何操作，这个必须从外部手工指定
+        """
         self.assigned_board: NumBoard = np.zeros((9,9), dtype=np.int8)
         self.candidates_board: CandBoard = possible_cands
         
@@ -37,18 +44,17 @@ class SolvingBoard:
         return self.assigned_board.__str__()
     
     def settle(self, pos: Position, num: int | np.int_) -> bool:
-        '''
-        Settle a specific number `num` on a specific position `pos`.
+        """Settle a specific number `num` on a specific position `pos`.
 
         This method will automatically eliminate the candidates in the row, column, and block where the num is settled. It will also eliminate some other candidates in accordance with the constraints.
 
         The `candidates_board` on the setteled position will be set as all zero.
 
         Args:
-            pos: `tuple` of two `int`, with range `0-8`
-            num: `int`, range `1-9`.
-        '''
-
+            pos (Position): settle 的坐标，注意范围是 0-8
+            num (int): settle 的坐标，注意范围是 0-8
+        """
+        
         assert num != 0
         x, y = pos
 
@@ -64,20 +70,22 @@ class SolvingBoard:
         return _numba_check_after_settle(self.candidates_board, self.assigned_board)
     
     def get_least_cand_pos(self) -> tuple[int, Position | None]:
-        '''
-        Scan the whole candidates board,
-        find the unassigned cell with the least candidates number.
-
-        Return a `tuple` of `(the_least_candidates_count, the_cell_position)`
+        """Scan the whole candidates board, find the unassigned cell with the least candidates number.
 
         Return `(0, None)` if there's no unassigned cell.
-        '''
+
+        Returns:
+            tuple: (the_least_candidates_count, the_cell_position)
+        """
+
         cand_count, (i, j) = _numba_get_least_cand_pos(self.candidates_board, self.assigned_board)
         if cand_count == 10:
             return 0, None
         return cand_count, (i, j)
         
     def quickdrops(self):
+        """quickdrop 算法，实现了 Unique Cand Cells 和 Uniqueness in Unit (row, col, block) 两种
+        """
 
         checked = 0
 

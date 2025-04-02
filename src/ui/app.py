@@ -328,12 +328,11 @@ class SudokuUI:
             for i, constraint in enumerate(s.constraints):
                 if not getattr(constraint, "preprocessed_flag", True):
                     self.log(f"[worker]: 正在预处理 {i}:{type(constraint).__name__}")
-                    time_counter = time.perf_counter()
+                    prep_timer = time.perf_counter()
                     getattr(constraint, "preprocess").__call__()
                     setattr(constraint, "preprocessed_flag", True)
-                    self.log(f"[worker]: {i} 预处理完成. {time.perf_counter()-time_counter:.3f}s")
+                    self.log(f"[worker]: {i} 预处理完成. {time.perf_counter()-prep_timer:.3f}s")
             self.log("[worker]: 开始求解")
-            Sudoku.reset_counter()
             s.solve_true_candidates()
         except InterruptedError:
             self.log("[worker]: 求解已被中止")
@@ -341,8 +340,8 @@ class SudokuUI:
             self.log("[worker]: " + str(e))
         else:
             self.out_q.put(s.tuf_board.copy())
-            sc, ct = Sudoku.get_counter_stat()
-            self.log(f"[worker]: 求解完成. {sc}次 {ct:.3f}s")
+            sc, ct = s.get_counter_stat()
+            self.log(f"[worker]: 求解完成. {sc}steps {ct:.3f}s")
         finally:
             self.out_q.put(None)
         

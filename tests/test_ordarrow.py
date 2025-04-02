@@ -33,11 +33,10 @@ def test_cand_1():
     prod_pos_list = [(1,4), (2,5)]
     oac = OrdArrowConstraint(sum_pos_list, prod_pos_list)
 
-    Sudoku.reset_counter()
     s = Sudoku(puzzle, [oac])
-    Sudoku.reset_counter()
     s.solve_true_candidates()
-    print(Sudoku.get_counter_stat())
+    sc, ct = s.get_counter_stat()
+    print(f"\n求解完成. {sc}steps, {ct:.3f}s, {ct/sc*1000:.4f}ms/step")
     assert s.print_true_candidates() == cands
 
 def test_cand_2():
@@ -69,9 +68,8 @@ def test_cand_2():
     prod_pos_list = [(1,5)]
     oac = OrdArrowConstraint(sum_pos_list, prod_pos_list)
 
-    Sudoku.reset_counter()
     s = Sudoku(puzzle, [oac])
-    Sudoku.reset_counter()
     s.solve_true_candidates()
-    print(Sudoku.get_counter_stat())
+    sc, ct = s.get_counter_stat()
+    print(f"\n求解完成. {sc}steps, {ct:.3f}s, {ct/sc*1000:.4f}ms/step")
     assert s.print_true_candidates() == cands

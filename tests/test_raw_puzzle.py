@@ -27,10 +27,10 @@ def test_solve_1():
         [4, 3, 1, 5, 8, 7, 2, 9, 6]
     ], dtype=np.int8)
 
-    Sudoku.reset_counter()
     s = Sudoku(puzzle)
     ret = s.solve()
-    print(Sudoku.get_counter_stat())
+    sc, ct = s.get_counter_stat()
+    print(f"求解完成. {sc}steps, {ct:.3f}s, {ct/sc*1000:.4f}ms/step")
     assert ret is not None
     assert np.array_equal(ret.assigned_board, ans)
 
@@ -59,10 +59,10 @@ def test_solve_2():
         [9, 8, 2, 5, 6, 1, 4, 3, 7]
     ], dtype=np.int8)
 
-    Sudoku.reset_counter()
     s = Sudoku(puzzle)
     ret = s.solve()
-    print(Sudoku.get_counter_stat())
+    sc, ct = s.get_counter_stat()
+    print(f"求解完成. {sc}steps, {ct:.3f}s, {ct/sc*1000:.4f}ms/step")
     assert ret is not None
     assert np.array_equal(ret.assigned_board, ans)
 
@@ -91,10 +91,10 @@ def test_solve_3():
         [5, 8, 1, 6, 7, 9, 4, 3, 2]
     ], dtype=np.int8)
 
-    Sudoku.reset_counter()
     s = Sudoku(puzzle)
     ret = s.solve()
-    print(Sudoku.get_counter_stat())
+    sc, ct = s.get_counter_stat()
+    print(f"求解完成. {sc}steps, {ct:.3f}s, {ct/sc*1000:.4f}ms/step")
     assert ret is not None
     assert np.array_equal(ret.assigned_board, ans)
 
@@ -124,9 +124,10 @@ def test_cand_1():
     ]
 
     s = Sudoku(puzzle)
-    Sudoku.reset_counter()
+    
     s.solve_true_candidates()
-    print(Sudoku.get_counter_stat())
+    sc, ct = s.get_counter_stat()
+    print(f"求解完成. {sc}steps, {ct:.3f}s, {ct/sc*1000:.4f}ms/step")
     assert s.print_true_candidates() == cands
 
 def test_cand_2():
@@ -155,9 +156,10 @@ def test_cand_2():
     ]
 
     s = Sudoku(puzzle)
-    Sudoku.reset_counter()
+    
     s.solve_true_candidates()
-    print(Sudoku.get_counter_stat())
+    sc, ct = s.get_counter_stat()
+    print(f"求解完成. {sc}steps, {ct:.3f}s, {ct/sc*1000:.4f}ms/step")
     assert s.print_true_candidates() == cands
 
 def test_cand_4():
@@ -186,9 +188,10 @@ def test_cand_4():
     ]
 
     s = Sudoku(puzzle)
-    Sudoku.reset_counter()
+    
     s.solve_true_candidates()
-    print(Sudoku.get_counter_stat())
+    sc, ct = s.get_counter_stat()
+    print(f"求解完成. {sc}steps, {ct:.3f}s, {ct/sc*1000:.4f}ms/step")
     assert s.print_true_candidates() == cands
 
 def test_cand_3():
@@ -217,7 +220,8 @@ def test_cand_3():
     ]
 
     s = Sudoku(puzzle)
-    Sudoku.reset_counter()
+    
     s.solve_true_candidates()
-    print(Sudoku.get_counter_stat())
+    sc, ct = s.get_counter_stat()
+    print(f"求解完成. {sc}steps, {ct:.3f}s, {ct/sc*1000:.4f}ms/step")
     assert s.print_true_candidates() == cands

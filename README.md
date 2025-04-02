@@ -41,4 +41,4 @@ Run in the root directory of this project:
 python -m src
 ```
 
-你可以修改 `src/config.py` 中的 `CONFIG_PUZZLE_BOARD` 和 `CONFIG_CONSTRAINTS` 这两个常量，它们分别代表了app启动时使用的背景谜题Puzzle和外加限制规则Constraints列表。
+你可以修改 `src/config.py` 中的 `CONFIG_PUZZLE_BOARD` 和 `CONFIG_CONSTRAINTS` 这两个常量，它们分别代表了app启动时使用的背景谜题、以及外加限制规则列表。
