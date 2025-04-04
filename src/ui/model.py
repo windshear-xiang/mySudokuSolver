@@ -3,6 +3,7 @@
 
 from typing import Sequence
 import numpy as np
+import json_tricks as json
 from src.utils.type_definitions import *
 from src.constraints import Constraint
 
@@ -46,3 +47,20 @@ class SudokuModel:
         '''删除已有的数字/constraint 之后，之前正确的还正确，但是之前错的可能对'''
         self.curr_tuf_board[self.curr_tuf_board == -1] = 0
     
+    def save_to_file(self, file_path):
+        obj = {
+            "curr_puzzle_board": self.curr_puzzle_board,
+            "curr_tuf_board": self.curr_tuf_board,
+            "constraints": self.constraints
+        }
+        with open(file_path, 'w', encoding='utf-8') as file:
+            json.dump(obj, file, indent=None)
+        return
+    
+    def load_from_file(self, file_path):        
+        with open(file_path, 'r', encoding='utf-8') as file:
+            obj = json.load(file)
+        self.curr_puzzle_board = obj["curr_puzzle_board"]
+        self.curr_tuf_board = obj["curr_tuf_board"]
+        self.constraints = obj["constraints"]
+        return

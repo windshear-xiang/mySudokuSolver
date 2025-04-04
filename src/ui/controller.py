@@ -8,8 +8,6 @@ import threading
 import time
 from src.ui.model import SudokuModel
 from src.ui.view import SudokuView
-from src.ui.logger import Logger
-from src.utils.file_utils import save_sudoku, load_sudoku
 from src.solver.sudoku import Sudoku
 
 REFRESH_TIME_INTERVAL = 100
@@ -61,11 +59,6 @@ class SudokuController:
             self.log("目前在求解中，不能保存")
             return
         self.log("试图储存当前棋盘")
-        board_state = {
-            "curr_puzzle_board": self.model.curr_puzzle_board,
-            "curr_tuf_board": self.model.curr_tuf_board,
-            "constraints": self.model.constraints
-        }
         file_path = filedialog.asksaveasfilename(
             defaultextension=".json",
             filetypes=[("JSON Files", "*.json"), ("All Files", "*.*")],
@@ -76,7 +69,7 @@ class SudokuController:
             return
         # 保存数据到文件中
         try:
-            save_sudoku(board_state, file_path)
+            self.model.save_to_file(file_path)
         except Exception as e:
             self.log(str(e))
             self.log("保存失败")
@@ -98,10 +91,7 @@ class SudokuController:
             return
         # 读取文件中的数据
         try:
-            board_state = load_sudoku(file_path)
-            self.model.curr_puzzle_board = board_state["curr_puzzle_board"]
-            self.model.curr_tuf_board = board_state["curr_tuf_board"]
-            self.model.constraints = board_state["constraints"]
+            self.model.load_from_file(file_path)
         except Exception as e:
             self.log("" + str(e))
             self.log("读取失败")
