@@ -210,7 +210,8 @@ class Sudoku:
         if not qsucc:
             #说明根本就无解
             raise Exception(f"Sudoku puzzle has no solution.")
-        self.tuf_board[X_INDICES, Y_INDICES, init_sol.assigned_board-1] = 1
+        mask = init_sol.assigned_board != 0 # 注意需要排除为0的格子
+        self.tuf_board[X_INDICES[mask], Y_INDICES[mask], init_sol.assigned_board[mask] - 1] = 1
 
         u_count, pos = self.get_least_unknown_cand_pos()
         while u_count and pos:

@@ -75,6 +75,7 @@ git push origin main
   + [x] 解决最后会认为无解的bug，应该是因为返回棋盘的settle全0
     + 直接从全0搜吧，这样可以避免很多bug
     + [x] 是因为之前加预先quickdrop导致的bug
+    + [x] 忘了排除为0的格子不修改了，还有Bug
   + [x] 可以保存和读取棋盘的功能
   + [x] 序数显示功能
   + [x] 优化代码结构，以及显示constraints的功能
@@ -87,6 +88,10 @@ git push origin main
   + [x] 撤销的功能
   + [ ] 把棋盘格子变成一整块canvas
   + [ ] 手动设定constraints的功能
+    + [ ] 图形显示
+    + [x] 删除
+      + 太多bug了，还是deepcopy吧，希望能正常运行
+    + [ ] 添加
   + [ ] 撤销和移动的按键绑定
   + [ ] 更好的无解和冲突显示
   + [ ] 压缩储存，稀疏矩阵/位掩码/pickle？

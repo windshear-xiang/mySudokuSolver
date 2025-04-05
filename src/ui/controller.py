@@ -51,6 +51,7 @@ class SudokuController:
         self.view.bind_event("load", self.on_load)
         self.view.bind_event("undo", self.on_undo)
         self.view.bind_event("redo", self.on_redo)
+        self.view.bind_event("delete_constraint", self.on_delete_constraint)
         # 绑定键盘事件（全局绑定，编辑状态下处理数字和删除操作）
         self.view.root.bind("<Key>", self.on_key_pressed)
         # 自动求解勾选框，勾选的时候也会自动求解一次
@@ -65,7 +66,17 @@ class SudokuController:
         self.view.root.after(REFRESH_TIME_INTERVAL, self.check_update)
 
     def on_refresh_constraints(self):
+        """假装存在一个按钮叫：刷新 constraints 显示列表"""
         self.view.refresh_constraints(self.model.constraints)
+    
+    def on_delete_constraint(self, index):
+        if self.solving:
+            self.log("目前在求解中，不能删除 constraint")
+            return
+        if self.model.del_constraint(index):
+            self.on_refresh_constraints()
+            self._auto_start_solver()
+        return
 
     def on_save(self):
         if self.solving:
@@ -116,17 +127,17 @@ class SudokuController:
         if self.solving:
             self.log("目前在求解中，不能撤销操作")
             return
-        self.model.to_prev_history()
-        self.on_refresh_constraints()
-        self._auto_start_solver()
+        if self.model.to_prev_history():
+            self.on_refresh_constraints()
+            self._auto_start_solver()
 
     def on_redo(self):
         if self.solving:
             self.log("目前在求解中，不能恢复操作")
             return
-        self.model.to_next_history()
-        self.on_refresh_constraints()
-        self._auto_start_solver()
+        if self.model.to_next_history():
+            self.on_refresh_constraints()
+            self._auto_start_solver()
     
     def on_cell_click(self, i: int, j: int):
         self.selected_cell = (i, j)       
@@ -206,11 +217,11 @@ def worker(s: Sudoku, log):
     try:
         for i, constraint in enumerate(s.constraints):
             if not getattr(constraint, "preprocessed_flag", True):
-                log(f"需要预处理 {i}:{type(constraint).__name__}")
+                log(f"需要预处理 C{i}:{type(constraint).__name__}")
                 prep_timer = time.perf_counter()
                 getattr(constraint, "preprocess").__call__()
                 setattr(constraint, "preprocessed_flag", True)
-                log(f"{i} 预处理完成. {time.perf_counter() - prep_timer:.3f}s")
+                log(f"C{i} 预处理完成. {time.perf_counter() - prep_timer:.3f}s")
         log("开始求解")
         s.solve_true_candidates()
     except InterruptedError:

@@ -229,14 +229,14 @@ class SudokuView:
             row_frame.pack(fill=tk.X, padx=2, pady=2)
 
             # Label 显示约束描述
-            label = tk.Label(row_frame, width=38, wraplength=250 ,text=info)
+            label = tk.Label(row_frame, width=38, wraplength=250 ,text=f"C{index}: "+info)
             label.grid(row=0, column=0, padx=2)
 
-            # 删除按钮，点击后调用 handle_event 并传入对应约束的 id
+            # 删除按钮，点击后调用 handle_event 并传入对应约束的id
             delete_button = tk.Button(
                 row_frame,
                 text="Del",
-                command=lambda: self.handle_event("delete_constraint", index)
+                command=lambda index=index: self.handle_event("delete_constraint", index)
             )
             delete_button.grid(row=0, column=1, padx=5, pady=5)
         return

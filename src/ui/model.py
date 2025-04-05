@@ -4,13 +4,14 @@
 from typing import Sequence
 import numpy as np
 import json_tricks as json
+from copy import deepcopy
 from src.utils.type_definitions import *
 from src.constraints import Constraint
 
 class SudokuModel:
     def __init__(self,
                  puzzle_board: NumBoard,
-                 constraints: Sequence[Constraint],
+                 constraints: list[Constraint],
                  log
                  ) -> None:
 
@@ -29,6 +30,16 @@ class SudokuModel:
         self.history_pointer = 0 # 指示当前历史版本 + 1
         self._build_new_history()
     
+    def del_constraint(self, index):
+        """返回是否真的删掉了"""
+        if index >= len(self.constraints):
+            self.log(f"要删除的 constraint 不存在")
+            return False
+        self.log(f"已删除 C{index} {self.constraints[index].info}")
+        self.constraints.pop(index)
+        self._build_new_history()
+        return True
+
     def set_digit(self, i, j, digit):
         """返回是否真的有修改"""
         assert digit != 0
@@ -81,26 +92,30 @@ class SudokuModel:
         return
 
     def _build_new_history(self):
-        self.log("记录新的历史版本")
+        self.log(f"记录新的历史版本 {self.history_pointer + 1}")
         del self.history[self.history_pointer : ]
-        self.history.append((self.curr_puzzle_board.copy(), [c for c in self.constraints]))
+        self.history.append((deepcopy(self.curr_puzzle_board), deepcopy(self.constraints))) #要构造新列表
         self.history_pointer += 1
 
     def to_prev_history(self):
+        """返回是否真的有撤回"""
         if self.history_pointer <= 1:
             self.log("无法撤回，已经是最早版本")
-            return
+            return False
         self.history_pointer -= 1
         self.curr_puzzle_board, self.constraints = self.history[self.history_pointer - 1]
         self.curr_tuf_board = np.zeros((9, 9, 9), dtype=np.int8)
-        self.log("已撤回到上一版本")
+        self.log(f"已撤回到上一版本 {self.history_pointer}/{len(self.history)}")
+        return True
     
     def to_next_history(self):
+        """返回是否真的有恢复"""
         if self.history_pointer == len(self.history):
             self.log("无法恢复，已经是最新版本")
-            return
+            return False
         self.history_pointer += 1
         self.curr_puzzle_board, self.constraints = self.history[self.history_pointer - 1]
         self.curr_tuf_board = np.zeros((9, 9, 9), dtype=np.int8)
-        self.log("已恢复到下一版本")
+        self.log(f"已恢复到下一版本 {self.history_pointer}/{len(self.history)}")
+        return True
 
