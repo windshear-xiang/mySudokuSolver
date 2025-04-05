@@ -86,7 +86,7 @@ git push origin main
   + [x] 修改表格会自动中断
   + [x] sl的编码放在model层
   + [x] 撤销的功能
-  + [ ] 把棋盘格子变成一整块canvas
+  + [x] 把棋盘格子变成一整块canvas
   + [ ] 手动设定constraints的功能
     + [ ] 图形显示
     + [x] 删除

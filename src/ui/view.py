@@ -1,7 +1,6 @@
 """视图层
 """
 
-import textwrap
 import numpy as np
 import tkinter as tk
 from src.utils.ordinal import digit2ord
@@ -11,6 +10,14 @@ DIGIT_TO_ORD_STR = {n: str(digit2ord(n)) for n in range(1, 10)}
 
 BOARD_SIDE_LENGTH = 90
 SIDE_PANEL_WIDTH = 45
+
+def calc_pos_on_board(i: int, j: int):
+    """计算单元格在 board_canvas 上的左上角坐标和右下角坐标"""
+    x0 = j * BOARD_SIDE_LENGTH
+    y0 = i * BOARD_SIDE_LENGTH
+    x1 = x0 + BOARD_SIDE_LENGTH
+    y1 = y0 + BOARD_SIDE_LENGTH
+    return x0, y0, x1, y1
 
 class SudokuView:
     def __init__(self) -> None:
@@ -53,21 +60,26 @@ class SudokuView:
         self.event_callbacks[event_type] = callback
     
     def _build_board(self):
-        """创建 9x9 网格，存放各格 Canvas"""
-        self.cells: list[list[tk.Canvas]] = [[None for _ in range(9)] for _ in range(9)] # type: ignore
-        for i in range(9):
-            for j in range(9):
-                canvas = tk.Canvas(self.root, width=90, height=90, 
-                                     highlightthickness=0, bg='white')
-                canvas.grid(row=i, column=j, padx=0, pady=0)
-                # 绑定点击事件（仅在编辑状态下有效）
-                canvas.bind("<Button-1>", lambda e, i=i, j=j: self.handle_event("cell_click", i, j))
-                self.cells[i][j] = canvas
+        """创建单一 Canvas 用于绘制整个数独棋盘"""
+        board_size = 9 * BOARD_SIDE_LENGTH  # 例如 9 * 90 = 810
+        self.board_canvas = tk.Canvas(self.root, width=board_size, height=board_size, bg="white", highlightthickness=0)
+        # 将棋盘 Canvas 放在主界面左侧（例如：grid(row=0, column=0)）
+        self.board_canvas.grid(row=0, column=0, padx=0, pady=0)
+        self.board_canvas.bind("<Button-1>", self._on_board_click)
+    
+    def _on_board_click(self, event):
+        """
+        根据鼠标点击的坐标计算所在单元格 (i, j)
+        然后调用 handle_event 通知 Controller 进行处理。
+        """
+        col = event.x // BOARD_SIDE_LENGTH
+        row = event.y // BOARD_SIDE_LENGTH
+        self.handle_event("cell_click", row, col)
     
     def _build_side_panel(self):
         """创建右侧控制面板"""
         self.side_frame = tk.Frame(self.root)
-        self.side_frame.grid(row=0, column=9, rowspan=9, padx=10, pady=10, sticky="n")
+        self.side_frame.grid(row=0, column=1, padx=10, pady=10, sticky="n")
 
         # 在 side_frame 顶部创建一个控制区（control_frame）用于放置勾选框和按钮
         self.control_frame = tk.Frame(self.side_frame)
@@ -129,76 +141,89 @@ class SudokuView:
         self.constraint_container.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
     
     def update_display(self, curr_puzzle_board, curr_tuf_board, constraints, selected_cell):
-        """绘制棋盘格子内容"""
+        """在单一 Canvas 上绘制整个棋盘内容"""
+        self.board_canvas.delete("all")  # 清除上一次的绘制
         for i in range(9):
             for j in range(9):
-                canvas = self.cells[i][j]
-                canvas.delete('all')
-                self._draw_cell_borders(canvas, i, j)
-                if curr_puzzle_board[i, j] != 0:
-                    self._draw_assigned_number(canvas, curr_puzzle_board[i, j])
-                else:
-                    cell_data = curr_tuf_board[i, j]
-                    true_cand_count = np.sum(cell_data == 1)
-                    false_cand_count = np.sum(cell_data == -1)
-                    if true_cand_count == 1 and false_cand_count == 8:
-                        # 已确定的格子：画大数字
-                        num = int(np.argmax(cell_data) + 1)
-                        self._draw_big_number(canvas, num)
-                    else:
-                        # 未确定：绘制候选信息
-                        self._draw_small_grid(canvas, cell_data)
-                if selected_cell == (i, j):
-                    self._highlight_cell(canvas)
+                self._draw_cell(i, j, curr_puzzle_board, curr_tuf_board, selected_cell)
+    
+    def _draw_cell(self, i: int, j: int, curr_puzzle_board, curr_tuf_board, selected_cell):
+        # 计算单元格在 board_canvas 上的左上角坐标和右下角坐标
+        x0, y0, x1, y1 = calc_pos_on_board(i,j)
+        center_x = x0 + BOARD_SIDE_LENGTH // 2
+        center_y = y0 + BOARD_SIDE_LENGTH // 2
 
-    def _draw_cell_borders(self, canvas: tk.Canvas, i: int, j: int):
-        # 清除并重绘单元格边框
-        canvas.delete('all')
+        # 1. 画单元格边框
+        self._draw_cell_borders(i, j)
+
+        # 2. 绘制单元格内容
+        if curr_puzzle_board[i, j] != 0:
+            self._draw_assigned_number(center_x, center_y, curr_puzzle_board[i, j])
+        else:
+            cell_data = curr_tuf_board[i, j]
+            true_cand_count = np.sum(cell_data == 1)
+            false_cand_count = np.sum(cell_data == -1)
+            if true_cand_count == 1 and false_cand_count == 8:
+                # 已确定的格子：画大数字
+                num = int(np.argmax(cell_data) + 1)
+                self._draw_big_number(center_x, center_y, num)
+            else:
+                # 未确定：绘制候选信息
+                self._draw_small_grid(x0, y0, cell_data)
+        if selected_cell == (i, j):
+            self._highlight_cell(x0, y0)
+
+    def _draw_cell_borders(self, i: int, j: int):
+        # 计算单元格在 board_canvas 上的左上角坐标和右下角坐标
+        x0, y0, x1, y1 = calc_pos_on_board(i,j)
         
         # 绘制细边线
-        canvas.create_line(0, 0, 0, 90, width=1, fill='#cccccc')
-        canvas.create_line(0, 0, 90, 0, width=1, fill='#cccccc')
-        canvas.create_line(89, 0, 89, 90, width=1, fill='#cccccc')
-        canvas.create_line(0, 89, 90, 89, width=1, fill='#cccccc')
+        self.board_canvas.create_line(x0, y0, x0, y1, width=1, fill='#cccccc')
+        self.board_canvas.create_line(x0, y0, x1, y0, width=1, fill='#cccccc')
+        self.board_canvas.create_line(x1 - 1, y0, x1 - 1, y1, width=1, fill='#cccccc')
+        self.board_canvas.create_line(x0, y1 - 1, x1, y1 - 1, width=1, fill='#cccccc')
         
-        # 绘制粗边线
+        # 绘制粗边线来突出 3x3 分块
         if j % 3 == 0:
-            canvas.create_line(0, 0, 0, 90, width=2)
+            self.board_canvas.create_line(x0, y0, x0, y1, width=2)
         if i % 3 == 0:
-            canvas.create_line(0, 0, 90, 0, width=2)
+            self.board_canvas.create_line(x0, y0, x1, y0, width=2)
         if j % 3 == 2:
-            canvas.create_line(89, 0, 89, 90, width=2)
+            self.board_canvas.create_line(x1 - 1, y0, x1 - 1, y1, width=2)
         if i % 3 == 2:
-            canvas.create_line(0, 89, 90, 89, width=2)
+            self.board_canvas.create_line(x0, y1 - 1, x1, y1 - 1, width=2)
     
-    def _highlight_cell(self, canvas: tk.Canvas):
-        # 绘制红色选中框
-        canvas.create_rectangle(2, 2, 88, 88, outline="red", width=3)
+    def _highlight_cell(self, x0: int, y0: int):
+        x1 = x0 + BOARD_SIDE_LENGTH
+        y1 = y0 + BOARD_SIDE_LENGTH
+        self.board_canvas.create_rectangle(x0 + 2, y0 + 2, x1 - 2, y1 - 2, outline="red", width=3)
     
-    def _draw_assigned_number(self, canvas: tk.Canvas, number: int):
+    def _draw_assigned_number(self, center_x: int, center_y: int, number: int):
         if self.display_as_ord_var.get():
-            canvas.create_text(45, 45, text=DIGIT_TO_ORD_STR[number], font=('Arial', 26), fill='black')
+            self.board_canvas.create_text(center_x, center_y, text=DIGIT_TO_ORD_STR[number], font=('Arial', 26), fill='black')
         else:
-            canvas.create_text(45, 45, text=str(number), font=('Arial', 40), fill='black')
+            self.board_canvas.create_text(center_x, center_y, text=str(number), font=('Arial', 40), fill='black')
     
-    def _draw_big_number(self, canvas: tk.Canvas, number: int):
+    def _draw_big_number(self, center_x: int, center_y: int, number: int):
         if self.display_as_ord_var.get():
-            canvas.create_text(45, 45, text=DIGIT_TO_ORD_STR[number], font=('Arial', 26), fill='blue')
+            self.board_canvas.create_text(center_x, center_y, text=DIGIT_TO_ORD_STR[number], font=('Arial', 26), fill='blue')
         else:
-            canvas.create_text(45, 45, text=str(number), font=('Arial', 40), fill='blue')
+            self.board_canvas.create_text(center_x, center_y, text=str(number), font=('Arial', 40), fill='blue')
         
-    def _draw_small_grid(self, canvas: tk.Canvas, cell_data: np.ndarray):
+    def _draw_small_grid(self, x0: int, y0: int, cell_data: np.ndarray):
         # 无解情况
         if np.all(cell_data == -1):
-            canvas.create_text(45, 45, text='X', font=('Arial', 40), fill='red')
+            self.board_canvas.create_text(x0 + BOARD_SIDE_LENGTH // 2, y0 + BOARD_SIDE_LENGTH // 2,
+                                        text='X', font=('Arial', 40), fill='red')
             return
         for num in range(1, 10):
             idx = num - 1
             state = cell_data[idx]
             row = (num - 1) // 3
             col = (num - 1) % 3
-            x = col * 30 + 15
-            y = row * 30 + 15
+            # 计算小数字在该单元格内的位置，注意相对于该单元格的 x0, y0
+            x = x0 + col * (BOARD_SIDE_LENGTH // 3) + (BOARD_SIDE_LENGTH // 6)
+            y = y0 + row * (BOARD_SIDE_LENGTH // 3) + (BOARD_SIDE_LENGTH // 6)
             if state == -1:
                 color = 'white'
             elif state == 1:
@@ -208,9 +233,11 @@ class SudokuView:
             if self.display_as_ord_var.get():
                 if num == 8:
                     x += 5
-                canvas.create_text(x+3, y+3, text=DIGIT_TO_ORD_STR[num], font=('Arial', 9), fill=color)
+                self.board_canvas.create_text(x + 3, y + 3, text=DIGIT_TO_ORD_STR[num],
+                                            font=('Arial', 9), fill=color)
             else:
-                canvas.create_text(x, y, text=str(num), font=('Arial', 12), fill=color)
+                self.board_canvas.create_text(x, y, text=str(num),
+                                            font=('Arial', 12), fill=color)
 
     def refresh_constraints(self, constraints):
         # 先清空原有内容
