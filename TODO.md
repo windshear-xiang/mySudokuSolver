@@ -85,7 +85,9 @@ git push origin main
   + [x] 修改表格会自动中断
   + [x] sl的编码放在model层
   + [x] 撤销的功能
+  + [ ] 把棋盘格子变成一整块canvas
   + [ ] 手动设定constraints的功能
+  + [ ] 撤销和移动的按键绑定
   + [ ] 更好的无解和冲突显示
   + [ ] 压缩储存，稀疏矩阵/位掩码/pickle？
   + [ ] 记忆化的worker

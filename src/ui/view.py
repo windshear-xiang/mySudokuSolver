@@ -1,12 +1,16 @@
 """视图层
 """
 
+import textwrap
 import numpy as np
 import tkinter as tk
 from src.utils.ordinal import digit2ord
 from src.ui.logger import Logger
 
 DIGIT_TO_ORD_STR = {n: str(digit2ord(n)) for n in range(1, 10)}
+
+BOARD_SIDE_LENGTH = 90
+SIDE_PANEL_WIDTH = 45
 
 class SudokuView:
     def __init__(self) -> None:
@@ -42,7 +46,7 @@ class SudokuView:
         if event_type in self.event_callbacks:
             self.event_callbacks[event_type](*args)
         else:
-            self.log(f"ERROR: {event_type} cannot be handled.")
+            self.log(f"ERROR: event_type {event_type} cannot be handled.")
 
     def bind_event(self, event_type, callback):
         """供 Controller 注册各类事件处理函数"""
@@ -108,14 +112,21 @@ class SudokuView:
         # 日志显示框（用于显示文字信息）
         self.log_label = tk.Label(self.side_frame, text="LOG")
         self.log_label.pack(side=tk.TOP, anchor='w', padx=5, pady=(20, 0))
-        self.log_text = tk.Text(self.side_frame, width=45, height=18, state=tk.DISABLED)
+        self.log_text = tk.Text(self.side_frame, width=SIDE_PANEL_WIDTH, height=18, state=tk.DISABLED)
         self.log_text.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
 
         # constraints 显示框，放在日志显示框下面
-        self.constraint_label = tk.Label(self.side_frame, text="Constraints")
-        self.constraint_label.pack(side=tk.TOP, anchor='w', padx=5, pady=(20, 0))
-        self.constraint_text = tk.Text(self.side_frame, width=45, height=18, state=tk.DISABLED)
-        self.constraint_text.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self.constraint_label_frame = tk.Frame(self.side_frame, width=SIDE_PANEL_WIDTH)
+        self.constraint_label_frame.pack(side=tk.TOP, anchor='w', padx=5, pady=(20, 0))
+
+        self.constraint_label = tk.Label(self.constraint_label_frame, text="Constraints")
+        self.constraint_label.grid(row=0, column=0, padx=5, pady=5)
+
+        self.new_constraint_button = tk.Button(self.constraint_label_frame, text="New", command=lambda: self.handle_event("new_constraint"))
+        self.new_constraint_button.grid(row=0, column=1, padx=5, pady=5)
+
+        self.constraint_container = tk.Frame(self.side_frame, width=SIDE_PANEL_WIDTH, height=18, borderwidth=1, relief="groove")
+        self.constraint_container.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
     
     def update_display(self, curr_puzzle_board, curr_tuf_board, constraints, selected_cell):
         """绘制棋盘格子内容"""
@@ -139,7 +150,6 @@ class SudokuView:
                         self._draw_small_grid(canvas, cell_data)
                 if selected_cell == (i, j):
                     self._highlight_cell(canvas)
-        self._print_constraints(constraints)
 
     def _draw_cell_borders(self, canvas: tk.Canvas, i: int, j: int):
         # 清除并重绘单元格边框
@@ -202,11 +212,32 @@ class SudokuView:
             else:
                 canvas.create_text(x, y, text=str(num), font=('Arial', 12), fill=color)
 
-    def _print_constraints(self, constraints):
-        self.constraint_text.configure(state=tk.NORMAL) # 注意切换状态
-        self.constraint_text.delete("1.0", tk.END) # 清空之前的
-        for c in constraints:
-            self.constraint_text.insert(tk.END, c.info + "\n")
-        self.constraint_text.see(tk.END)
-        self.constraint_text.configure(state=tk.DISABLED) # 注意切换状态
+    def refresh_constraints(self, constraints):
+        # 先清空原有内容
+        for old_widget in self.constraint_container.winfo_children():
+            old_widget.destroy()
+
+        if len(constraints) == 0:
+            empty_label = tk.Label(self.constraint_container, text="None.")
+            empty_label.pack(fill=tk.X, padx=2, pady=2)
+        # 为每个约束创建一个子 Frame，其内包含约束描述和删除按钮
+        for index, constraint in enumerate(constraints):
+            info = constraint.info
+
+            # 创建子 Frame（每行显示一条 constraint）
+            row_frame = tk.Frame(self.constraint_container, borderwidth=1, relief="sunken")
+            row_frame.pack(fill=tk.X, padx=2, pady=2)
+
+            # Label 显示约束描述
+            label = tk.Label(row_frame, width=38, wraplength=250 ,text=info)
+            label.grid(row=0, column=0, padx=2)
+
+            # 删除按钮，点击后调用 handle_event 并传入对应约束的 id
+            delete_button = tk.Button(
+                row_frame,
+                text="Del",
+                command=lambda: self.handle_event("delete_constraint", index)
+            )
+            delete_button.grid(row=0, column=1, padx=5, pady=5)
+        return
 

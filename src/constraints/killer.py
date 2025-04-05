@@ -13,7 +13,7 @@ class KillerConstraint(DenseMultiCellConstraint):
     @property
     def info(self) -> str:
         sl = [f"({x},{y})" for x,y in self.cell_positions.tolist()]
-        return f"KillerConstraint\n{' + '.join(sl)} = {self.killer_sum}\n"
+        return f"KillerConstraint\n{' + '.join(sl)} = {self.killer_sum}"
     
     def is_valid(self, assigned_board: NumBoard) -> bool:
         return _numba_is_valid(assigned_board, self.rows, self.cols, self.killer_sum)

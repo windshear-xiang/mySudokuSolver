@@ -40,6 +40,7 @@ class SudokuController:
 
         # 初始刷新界面
         self.view.root.after(REFRESH_TIME_INTERVAL, self.check_update)
+        self.on_refresh_constraints()
     
     def _bind_events(self):
         """注册视图层事件到控制层处理函数"""
@@ -48,13 +49,24 @@ class SudokuController:
         self.view.bind_event("stop_solver", self.on_stop_solver)
         self.view.bind_event("save", self.on_save)
         self.view.bind_event("load", self.on_load)
-        self.view.bind_event("undo", self.on_undu)
+        self.view.bind_event("undo", self.on_undo)
         self.view.bind_event("redo", self.on_redo)
         # 绑定键盘事件（全局绑定，编辑状态下处理数字和删除操作）
         self.view.root.bind("<Key>", self.on_key_pressed)
         # 自动求解勾选框，勾选的时候也会自动求解一次
         self.view.auto_solve_cb.config(variable=self.auto_solve_var, command=self._auto_start_solver)
     
+    def check_update(self):
+        self.view.update_display(self.model.curr_puzzle_board,
+                                 self.model.curr_tuf_board,
+                                 self.model.constraints,
+                                 self.selected_cell)
+        self.listen_solver()
+        self.view.root.after(REFRESH_TIME_INTERVAL, self.check_update)
+
+    def on_refresh_constraints(self):
+        self.view.refresh_constraints(self.model.constraints)
+
     def on_save(self):
         if self.solving:
             self.log("目前在求解中，不能保存")
@@ -98,7 +110,24 @@ class SudokuController:
             self.log("读取失败")
         else:
             self.log("已读取 " + file_path)
+            self.on_refresh_constraints()
         
+    def on_undo(self):
+        if self.solving:
+            self.log("目前在求解中，不能撤销操作")
+            return
+        self.model.to_prev_history()
+        self.on_refresh_constraints()
+        self._auto_start_solver()
+
+    def on_redo(self):
+        if self.solving:
+            self.log("目前在求解中，不能恢复操作")
+            return
+        self.model.to_next_history()
+        self.on_refresh_constraints()
+        self._auto_start_solver()
+    
     def on_cell_click(self, i: int, j: int):
         self.selected_cell = (i, j)       
     
@@ -127,15 +156,7 @@ class SudokuController:
                 self.view.root.after(REFRESH_TIME_INTERVAL, self._auto_start_solver)
                 return
             self.on_start_solver()
-    
-    def check_update(self):
-        self.view.update_display(self.model.curr_puzzle_board,
-                                 self.model.curr_tuf_board,
-                                 self.model.constraints,
-                                 self.selected_cell)
-        self.listen_solver()
-        self.view.root.after(REFRESH_TIME_INTERVAL, self.check_update)
-    
+        
     def on_start_solver(self):
         """启动求解器"""
         if self.solving:
@@ -177,20 +198,6 @@ class SudokuController:
         except Exception as e:
             self.log(str(e))
         return
-
-    def on_undu(self):
-        if self.solving:
-            self.log("目前在求解中，不能撤销操作")
-            return
-        self.model.to_prev_history()
-        self._auto_start_solver()
-
-    def on_redo(self):
-        if self.solving:
-            self.log("目前在求解中，不能恢复操作")
-            return
-        self.model.to_next_history()
-        self._auto_start_solver()
 
 def worker(s: Sudoku, log):
     """运行在另一个线程"""

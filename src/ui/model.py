@@ -81,7 +81,7 @@ class SudokuModel:
         return
 
     def _build_new_history(self):
-        self.log("创建新版本")
+        self.log("记录新的历史版本")
         del self.history[self.history_pointer : ]
         self.history.append((self.curr_puzzle_board.copy(), [c for c in self.constraints]))
         self.history_pointer += 1

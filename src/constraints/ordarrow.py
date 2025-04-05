@@ -21,7 +21,7 @@ class OrdArrowConstraint(DenseMultiCellConstraint):
     def info(self) -> str:
         sl = [f"({x},{y})" for x,y in self.sum_pos_list.tolist()]
         pl = [f"({x},{y})" for x,y in self.prod_pos_list.tolist()]
-        return f"OrdArrowConstraint\n{' + '.join(sl)} = {'*'.join(pl)}\n"
+        return f"OrdArrowConstraint\n{' + '.join(sl)} = {' * '.join(pl)}"
     
     def is_valid(self, assigned_board):
         return _numba_is_valid(assigned_board, self.sum_pos_list, self.prod_pos_list)
