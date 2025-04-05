@@ -25,6 +25,18 @@ class SudokuView:
         # 可对外提供接口，绑定事件处理程序
         self.event_callbacks = {}
     
+    def _log_append(self, message: str):
+        """
+        将日志信息追加到日志显示框中。
+        为了线程安全，这里用 after 方法在主线程中更新 Text 控件
+        """
+        def append():
+            self.log_text.configure(state=tk.NORMAL) # 切换为可写入状态
+            self.log_text.insert(tk.END, message + "\n")
+            self.log_text.see(tk.END)
+            self.log_text.configure(state=tk.DISABLED) # 还原为不可写入状态
+        self.root.after(0, append)
+
     def handle_event(self, event_type, *args):
         """视图层收集事件，再转发给 Controller 的事件处理函数"""
         if event_type in self.event_callbacks:
@@ -67,32 +79,45 @@ class SudokuView:
 
         # 求解的按钮
         self.solve_button = tk.Button(self.control_frame, text="Solve True Candidates", command=lambda: self.handle_event("start_solver"))
-        self.solve_button.grid(row=1, column=0, padx=5)
+        self.solve_button.grid(row=1, column=0, padx=5, pady=10)
 
         # 强行停止求解的按钮
         self.stop_button = tk.Button(self.control_frame, text="Force Stop", command=lambda: self.handle_event("stop_solver"))
-        self.stop_button.grid(row=1, column=1, padx=5)
+        self.stop_button.grid(row=1, column=1, padx=5, pady=10)
 
         # 在控制区下方增加一行，用于 "Save" 和 "Load" 按钮
-        self.save_button = tk.Button(self.control_frame, text="Save", command=lambda: self.handle_event("save"))
-        self.save_button.grid(row=2, column=0, padx=5, pady=20)
+        self.sl_frame = tk.Frame(self.control_frame)
+        self.sl_frame.grid(row=2, column=0, padx=5, pady=5)
 
-        self.load_button = tk.Button(self.control_frame, text="Load", command=lambda: self.handle_event("load"))
-        self.load_button.grid(row=2, column=1, padx=5, pady=20)
+        self.save_button = tk.Button(self.sl_frame, text="Save", command=lambda: self.handle_event("save"))
+        self.save_button.grid(row=0, column=0, padx=5, pady=10)
+
+        self.load_button = tk.Button(self.sl_frame, text="Load", command=lambda: self.handle_event("load"))
+        self.load_button.grid(row=0, column=1, padx=5, pady=10)
+
+        # 撤销和恢复
+        self.unredo_frame = tk.Frame(self.control_frame)
+        self.unredo_frame.grid(row=2, column=1, padx=5, pady=5)
+
+        self.undo_button = tk.Button(self.unredo_frame, text="Undo", command=lambda: self.handle_event("undo"))
+        self.undo_button.grid(row=0, column=0, padx=5, pady=10)
+
+        self.redo_button = tk.Button(self.unredo_frame, text="Redo", command=lambda: self.handle_event("redo"))
+        self.redo_button.grid(row=0, column=1, padx=5, pady=10)
 
         # 日志显示框（用于显示文字信息）
         self.log_label = tk.Label(self.side_frame, text="LOG")
         self.log_label.pack(side=tk.TOP, anchor='w', padx=5, pady=(20, 0))
-        self.log_text = tk.Text(self.side_frame, width=45, height=20, state=tk.DISABLED)
+        self.log_text = tk.Text(self.side_frame, width=45, height=18, state=tk.DISABLED)
         self.log_text.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
 
         # constraints 显示框，放在日志显示框下面
         self.constraint_label = tk.Label(self.side_frame, text="Constraints")
         self.constraint_label.pack(side=tk.TOP, anchor='w', padx=5, pady=(20, 0))
-        self.constraint_text = tk.Text(self.side_frame, width=45, height=20, state=tk.DISABLED)
+        self.constraint_text = tk.Text(self.side_frame, width=45, height=18, state=tk.DISABLED)
         self.constraint_text.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
     
-    def update_display(self, curr_puzzle_board, curr_tuf_board, selected_cell):
+    def update_display(self, curr_puzzle_board, curr_tuf_board, constraints, selected_cell):
         """绘制棋盘格子内容"""
         for i in range(9):
             for j in range(9):
@@ -114,6 +139,7 @@ class SudokuView:
                         self._draw_small_grid(canvas, cell_data)
                 if selected_cell == (i, j):
                     self._highlight_cell(canvas)
+        self._print_constraints(constraints)
 
     def _draw_cell_borders(self, canvas: tk.Canvas, i: int, j: int):
         # 清除并重绘单元格边框
@@ -176,15 +202,11 @@ class SudokuView:
             else:
                 canvas.create_text(x, y, text=str(num), font=('Arial', 12), fill=color)
 
-    def _log_append(self, message: str):
-        """
-        将日志信息追加到日志显示框中。
-        为了线程安全，这里用 after 方法在主线程中更新 Text 控件
-        """
-        def append():
-            self.log_text.configure(state=tk.NORMAL) # 切换为可写入状态
-            self.log_text.insert(tk.END, message + "\n")
-            self.log_text.see(tk.END)
-            self.log_text.configure(state=tk.DISABLED) # 还原为不可写入状态
-        self.root.after(0, append)
+    def _print_constraints(self, constraints):
+        self.constraint_text.configure(state=tk.NORMAL) # 注意切换状态
+        self.constraint_text.delete("1.0", tk.END) # 清空之前的
+        for c in constraints:
+            self.constraint_text.insert(tk.END, c.info + "\n")
+        self.constraint_text.see(tk.END)
+        self.constraint_text.configure(state=tk.DISABLED) # 注意切换状态
 

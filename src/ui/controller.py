@@ -13,12 +13,16 @@ from src.solver.sudoku import Sudoku
 REFRESH_TIME_INTERVAL = 100
 
 class SudokuController:
-    def __init__(self) -> None:
-        self.model = SudokuModel()
+    def __init__(self, puzzle_board, constraints) -> None:
+        
+        # 视图层
         self.view = SudokuView()
-
-        # 日志生成器
         self.raw_logger = self.view.raw_logger
+
+        # 模型层
+        self.model = SudokuModel(puzzle_board, constraints, self.raw_logger("model"))
+
+        # 从视图层构造日志生成器
         self.log = self.raw_logger("controller")
 
         # 控制层状态属性
@@ -36,11 +40,6 @@ class SudokuController:
 
         # 初始刷新界面
         self.view.root.after(REFRESH_TIME_INTERVAL, self.check_update)
-
-        # 临时
-        # 重新输出constraints
-        # TODO
-        # self._print_constraints()
     
     def _bind_events(self):
         """注册视图层事件到控制层处理函数"""
@@ -49,10 +48,12 @@ class SudokuController:
         self.view.bind_event("stop_solver", self.on_stop_solver)
         self.view.bind_event("save", self.on_save)
         self.view.bind_event("load", self.on_load)
+        self.view.bind_event("undo", self.on_undu)
+        self.view.bind_event("redo", self.on_redo)
         # 绑定键盘事件（全局绑定，编辑状态下处理数字和删除操作）
         self.view.root.bind("<Key>", self.on_key_pressed)
         # 自动求解勾选框，勾选的时候也会自动求解一次
-        self.view.auto_solve_cb.config(variable=self.auto_solve_var, command=self.auto_start_solver)
+        self.view.auto_solve_cb.config(variable=self.auto_solve_var, command=self._auto_start_solver)
     
     def on_save(self):
         if self.solving:
@@ -112,27 +113,31 @@ class SudokuController:
             # 如果按下数字键1~9，则设定该格的值，并标记为用户输入
             digit = int(event.char)
             if self.model.set_digit(i, j, digit):
-                self.auto_start_solver()
+                self._auto_start_solver()
         elif event.keysym in ("BackSpace", "Delete"):
             # 清空当前格（置为0）
             if self.model.del_digit(i, j):
-                self.auto_start_solver()
+                self._auto_start_solver()
     
-    def auto_start_solver(self):
+    def _auto_start_solver(self):
         if self.auto_solve_var.get():
             if self.solving:
                 self.log("目前在求解中，将中止并重新求解")
                 self.on_stop_solver()
-                self.view.root.after(REFRESH_TIME_INTERVAL, self.auto_start_solver)
+                self.view.root.after(REFRESH_TIME_INTERVAL, self._auto_start_solver)
                 return
             self.on_start_solver()
     
     def check_update(self):
-        self.view.update_display(self.model.curr_puzzle_board, self.model.curr_tuf_board, self.selected_cell)
+        self.view.update_display(self.model.curr_puzzle_board,
+                                 self.model.curr_tuf_board,
+                                 self.model.constraints,
+                                 self.selected_cell)
         self.listen_solver()
         self.view.root.after(REFRESH_TIME_INTERVAL, self.check_update)
     
     def on_start_solver(self):
+        """启动求解器"""
         if self.solving:
             self.log("目前已经在求解中，不能重复启动")
             return
@@ -173,6 +178,20 @@ class SudokuController:
             self.log(str(e))
         return
 
+    def on_undu(self):
+        if self.solving:
+            self.log("目前在求解中，不能撤销操作")
+            return
+        self.model.to_prev_history()
+        self._auto_start_solver()
+
+    def on_redo(self):
+        if self.solving:
+            self.log("目前在求解中，不能恢复操作")
+            return
+        self.model.to_next_history()
+        self._auto_start_solver()
+
 def worker(s: Sudoku, log):
     """运行在另一个线程"""
     log("求解线程被调用")
@@ -197,3 +216,4 @@ def worker(s: Sudoku, log):
         log(f"求解完成. {sc}steps {ct:.3f}s")
     finally:
         s.out_q.put(None)
+
