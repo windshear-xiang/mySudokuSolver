@@ -74,7 +74,7 @@ git push origin main
   + [x] 加上不断自动计算
   + [x] 解决最后会认为无解的bug，应该是因为返回棋盘的settle全0
     + 直接从全0搜吧，这样可以避免很多bug
-    + [ ] 是因为之前加预先quickdrop导致的bug
+    + [x] 是因为之前加预先quickdrop导致的bug
   + [x] 可以保存和读取棋盘的功能
   + [x] 序数显示功能
   + [x] 优化代码结构，以及显示constraints的功能
@@ -85,8 +85,9 @@ git push origin main
   + [x] 修改表格会自动中断
   + [x] sl的编码放在model层
   + [x] 撤销的功能
-  + [ ] 更好的无解和冲突显示
-  + [ ] 记忆化的worker
-  + [ ] 压缩储存，稀疏矩阵/位掩码/pickle？
   + [ ] 手动设定constraints的功能
+  + [ ] 更好的无解和冲突显示
+  + [ ] 压缩储存，稀疏矩阵/位掩码/pickle？
+  + [ ] 记忆化的worker
+  
   

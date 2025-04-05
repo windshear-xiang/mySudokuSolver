@@ -26,7 +26,7 @@ class SolvingBoard:
                  ) -> None:
         """生成一个 `SolvingBoard` 对象
 
-        注意 `SolvingBoard` 的 `__init__ 很慢，没有优化过。
+        注意 `SolvingBoard` 的 `__init__` 很慢，没有优化过。
 
         另外 `__init__` 不会对类属性 `constraints` 做任何操作，这个必须从外部手工指定
         """
@@ -38,7 +38,7 @@ class SolvingBoard:
         for (i, j), num in zip(zip(rows, cols), nums):
             succ = self.settle((i, j), num)
             if not succ:
-                raise Exception(f"Sudoku puzzle is incompatible.")
+                raise Exception("Sudoku puzzle is incompatible.")
     
     def __str__(self) -> str:
         return self.assigned_board.__str__()
@@ -158,7 +158,7 @@ def _numba_get_least_cand_pos(candidates_board, assigned_board):
 @njit
 def _numba_settle(candidates_board, assigned_board, x, y, num):
     
-    if candidates_board[x,y,num-1] != True:
+    if candidates_board[x, y, num-1] != True:
         return False
 
     # if already settled

@@ -58,8 +58,9 @@ class Sudoku:
     def init_settle(self):
         """根据 puzzle_board 的情况初始化一下 tuf_board。
 
+        并不会整个清零 tuf_board。
         已经填了数的格子，把那个数设置是 1(t)，其他数都是 -1(f)。
-        把同行同列同块这些格子里，相应的数都设置位 -1(f)
+        把同行同列同块这些格子里，相应的数都设置位 -1(f)。
         """
         rows, cols = np.nonzero(self.puzzle_board)
         nums = self.puzzle_board[rows, cols]
@@ -141,7 +142,7 @@ class Sudoku:
 
             # Jump into deeper recursion
             ret_sol = self.solve_step(next_sol)
-            if ret_sol:
+            if ret_sol is not None:
                 return ret_sol
         
         return None
@@ -184,7 +185,9 @@ class Sudoku:
 
     def solve_true_candidates(self, reset_counter = True):
         """求解 true candidates
-        直接修改 `self.tuf_board`
+
+        注意这个程序依赖于当前 `self.tuf_board` 的情况，并不会清零。
+        求解过程会直接修改 tuf_board
 
         Args:
             reset_counter (bool): 是否重置计时器
@@ -196,12 +199,18 @@ class Sudoku:
         if reset_counter:
             self.reset_counter()
 
+        # 根据 puzzle_board 的情况初始化一下 tuf_board
         self.init_settle()
+        # 创建用于求解的对象
         SolvingBoard.constraints = self.constraints
         init_sol = SolvingBoard(self.puzzle_board, possible_cands=self.tu_board)
+
+        # 先预先 quickdrop 一次
         qsucc = init_sol.quickdrops()
         if not qsucc:
-            raise Exception(f"Sudoku puzzle is incompatible.")
+            #说明根本就无解
+            raise Exception(f"Sudoku puzzle has no solution.")
+        self.tuf_board[X_INDICES, Y_INDICES, init_sol.assigned_board-1] = 1
 
         u_count, pos = self.get_least_unknown_cand_pos()
         while u_count and pos:
@@ -216,7 +225,7 @@ class Sudoku:
                     qsucc = try_sol.quickdrops()
                     if qsucc:
                         ret_sol = self.solve_step(try_sol)
-                        if ret_sol:
+                        if ret_sol is not None:
                             # candidate is good
                             self.tuf_board[X_INDICES, Y_INDICES, ret_sol.assigned_board-1] = 1
                             continue
@@ -237,12 +246,19 @@ class Sudoku:
         return
     
     def count_tuf_cands(self):
+        """输出当前整个棋盘上 true, unknown, false 三种 candidate 的数目
+
+        Returns:
+            tuple: (t, u, f)
+        """
+
         t = np.sum(self.tuf_board == 1)
         u = np.sum(self.tuf_board == 0)
         f = np.sum(self.tuf_board == -1)
         return t, u, f
     
     def flush_tuf_count(self):
+        """在 sys.stdout 输出整个棋盘上true, unknown, false 三种 candidate 的数目，以及当前的总搜索步数和耗时"""
         t,u,f = self.count_tuf_cands()
         steps, times = self.get_counter_stat()
         sys.stdout.write(f"\rUnknown={u} True={t} False={f}, in {steps}steps {times:.4f}s   ")
