@@ -5,19 +5,10 @@ import numpy as np
 import tkinter as tk
 from src.utils.ordinal import digit2ord
 from src.ui.logger import Logger
+from src.config import BOARD_SIDE_LENGTH, SIDE_PANEL_WIDTH
+from src.utils.coord_calc import *
 
 DIGIT_TO_ORD_STR = {n: str(digit2ord(n)) for n in range(1, 10)}
-
-BOARD_SIDE_LENGTH = 90
-SIDE_PANEL_WIDTH = 45
-
-def calc_pos_on_board(i: int, j: int):
-    """计算单元格在 board_canvas 上的左上角坐标和右下角坐标"""
-    x0 = j * BOARD_SIDE_LENGTH
-    y0 = i * BOARD_SIDE_LENGTH
-    x1 = x0 + BOARD_SIDE_LENGTH
-    y1 = y0 + BOARD_SIDE_LENGTH
-    return x0, y0, x1, y1
 
 class SudokuView:
     def __init__(self) -> None:
@@ -142,40 +133,46 @@ class SudokuView:
     
     def update_display(self, curr_puzzle_board, curr_tuf_board, constraints, selected_cell):
         """在单一 Canvas 上绘制整个棋盘内容"""
-        self.board_canvas.delete("all")  # 清除上一次的绘制
+        # 清除上一次的绘制
+        self.board_canvas.delete("all")
+        # 画单元格边框
         for i in range(9):
             for j in range(9):
-                self._draw_cell(i, j, curr_puzzle_board, curr_tuf_board, selected_cell)
+                self._draw_cell_borders(i, j)
+        # 画约束规则的显示
+        self._draw_constraints(constraints)
+        # 绘制单元格内容
+        for i in range(9):
+            for j in range(9):
+                self._draw_cell_content(i, j, curr_puzzle_board, curr_tuf_board, selected_cell)
     
-    def _draw_cell(self, i: int, j: int, curr_puzzle_board, curr_tuf_board, selected_cell):
-        # 计算单元格在 board_canvas 上的左上角坐标和右下角坐标
-        x0, y0, x1, y1 = calc_pos_on_board(i,j)
-        center_x = x0 + BOARD_SIDE_LENGTH // 2
-        center_y = y0 + BOARD_SIDE_LENGTH // 2
+    def _draw_cell_content(self, i: int, j: int, curr_puzzle_board, curr_tuf_board, selected_cell):
+        """绘制单元格内容"""
+        # 计算单元格在 board_canvas 上的坐标
+        x0, y0 = calc_left_top(i, j)
+        center_x , center_y = calc_center(i, j)
 
-        # 1. 画单元格边框
-        self._draw_cell_borders(i, j)
-
-        # 2. 绘制单元格内容
         if curr_puzzle_board[i, j] != 0:
+            # 已经 assigned 的格子：画黑色大数字
             self._draw_assigned_number(center_x, center_y, curr_puzzle_board[i, j])
         else:
             cell_data = curr_tuf_board[i, j]
             true_cand_count = np.sum(cell_data == 1)
             false_cand_count = np.sum(cell_data == -1)
             if true_cand_count == 1 and false_cand_count == 8:
-                # 已确定的格子：画大数字
+                # 已确定的格子：画蓝色大数字
                 num = int(np.argmax(cell_data) + 1)
                 self._draw_big_number(center_x, center_y, num)
             else:
                 # 未确定：绘制候选信息
                 self._draw_small_grid(x0, y0, cell_data)
+        # 绘制选框
         if selected_cell == (i, j):
             self._highlight_cell(x0, y0)
 
     def _draw_cell_borders(self, i: int, j: int):
         # 计算单元格在 board_canvas 上的左上角坐标和右下角坐标
-        x0, y0, x1, y1 = calc_pos_on_board(i,j)
+        (x0, y0), (x1, y1) = calc_left_top(i, j), calc_right_bottom(i, j)
         
         # 绘制细边线
         self.board_canvas.create_line(x0, y0, x0, y1, width=1, fill='#cccccc')
@@ -226,10 +223,11 @@ class SudokuView:
             y = y0 + row * (BOARD_SIDE_LENGTH // 3) + (BOARD_SIDE_LENGTH // 6)
             if state == -1:
                 color = 'white'
+                continue
             elif state == 1:
                 color = 'blue'
             else:
-                color = '#cccccc'
+                color = 'green' # '#cccccc'
             if self.display_as_ord_var.get():
                 if num == 8:
                     x += 5
@@ -239,7 +237,7 @@ class SudokuView:
                 self.board_canvas.create_text(x, y, text=str(num),
                                             font=('Arial', 12), fill=color)
 
-    def refresh_constraints(self, constraints):
+    def refresh_constraints_panel(self, constraints):
         # 先清空原有内容
         for old_widget in self.constraint_container.winfo_children():
             old_widget.destroy()
@@ -268,3 +266,6 @@ class SudokuView:
             delete_button.grid(row=0, column=1, padx=5, pady=5)
         return
 
+    def _draw_constraints(self, constraints):
+        for constraint in constraints:
+            constraint.draw(self.board_canvas)

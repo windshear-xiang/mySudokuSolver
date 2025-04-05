@@ -67,7 +67,7 @@ class SudokuController:
 
     def on_refresh_constraints(self):
         """假装存在一个按钮叫：刷新 constraints 显示列表"""
-        self.view.refresh_constraints(self.model.constraints)
+        self.view.refresh_constraints_panel(self.model.constraints)
     
     def on_delete_constraint(self, index):
         if self.solving:

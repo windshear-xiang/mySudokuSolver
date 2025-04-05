@@ -2,6 +2,7 @@ import numpy as np
 import time
 from numba import njit, prange
 from typing import Sequence
+import tkinter as tk
 from . import DenseMultiCellConstraint
 from src.utils.type_definitions import *
 
@@ -31,6 +32,10 @@ class KillerConstraint(DenseMultiCellConstraint):
         
         print(f"Preprocessed. combo_count={combo_count}. time={time.perf_counter() - time_counter:.6f}")
         return
+    
+    def draw(self, board_canvas: tk.Canvas):
+
+        pass
 
 @njit(nogil=True)
 def _numba_is_valid(board: np.ndarray, rows: np.ndarray, cols: np.ndarray, killer_sum: int) -> bool:
