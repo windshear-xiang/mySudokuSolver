@@ -211,7 +211,7 @@ class SudokuView:
         # 无解情况
         if np.all(cell_data == -1):
             self.board_canvas.create_text(x0 + BOARD_SIDE_LENGTH // 2, y0 + BOARD_SIDE_LENGTH // 2,
-                                        text='X', font=('Arial', 40), fill='red')
+                                          text='X', font=('Arial', BOARD_SIDE_LENGTH // 2), fill='red')
             return
         for num in range(1, 10):
             idx = num - 1
@@ -231,11 +231,13 @@ class SudokuView:
             if self.display_as_ord_var.get():
                 if num == 8:
                     x += 5
-                self.board_canvas.create_text(x + 3, y + 3, text=DIGIT_TO_ORD_STR[num],
-                                            font=('Arial', 9), fill=color)
+                self.board_canvas.create_text(x + 3, y + 3,
+                                              text=DIGIT_TO_ORD_STR[num],
+                                              font=('Arial', 9), fill=color)
             else:
-                self.board_canvas.create_text(x, y, text=str(num),
-                                            font=('Arial', 12), fill=color)
+                self.board_canvas.create_text(x, y,
+                                              text=str(num),
+                                              font=('Arial', 12), fill=color)
 
     def refresh_constraints_panel(self, constraints):
         # 先清空原有内容

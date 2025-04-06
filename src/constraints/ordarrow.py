@@ -5,6 +5,7 @@ import tkinter as tk
 from src.utils.ordinal import Ordinal, digit2ord
 from src.utils.coord_calc import *
 from src.config import BOARD_SIDE_LENGTH
+from src.utils.tkinter_polygon import create_approx_circle
 from . import DenseMultiCellConstraint
 
 class OrdArrowConstraint(DenseMultiCellConstraint):
@@ -44,21 +45,29 @@ class OrdArrowConstraint(DenseMultiCellConstraint):
         return
     
     def draw(self, board_canvas: tk.Canvas, color:str="gray"):
-        line_width = BOARD_SIDE_LENGTH / 4
+        line_width = BOARD_SIDE_LENGTH * 0.25
+        radius = BOARD_SIDE_LENGTH * 0.4
+        side_len = BOARD_SIDE_LENGTH * 0.3
+
+        prod_center_xys = [calc_center(i, j) for i, j in self.prod_pos_list]
+        sum_center_xys = [calc_center(i, j) for i, j in self.sum_pos_list]
+        # arrow
+        board_canvas.create_line(prod_center_xys + sum_center_xys,
+                                 width=line_width, fill=color, stipple="gray50",
+                                 arrow="last", arrowshape=(line_width*2, line_width*2, line_width))
         # prod
-        for (i, j) in self.prod_pos_list:
-            center_x, center_y = calc_center(i, j)
-            board_canvas.create_oval(center_x-line_width, center_y-line_width, center_x+line_width, center_y+line_width, fill=color, outline=color, stipple="error")
-        # if len(self.prod_pos_list) > 1:
-        #     board_canvas.create_line([calc_center(i, j) for i, j in self.prod_pos_list], width=line_width, fill=color, stipple="gray50")
+        for center_x, center_y in prod_center_xys:
+            create_approx_circle(board_canvas,
+                                 center_x, center_y, radius,
+                                 fill=color, outline=color, width=2, stipple="gray50")
         # sum
-        for (i, j) in list(self.sum_pos_list):
-            center_x, center_y = calc_center(i, j)
-            board_canvas.create_rectangle(center_x-line_width, center_y-line_width, center_x+line_width, center_y+line_width, fill=color, outline=color, stipple="gray25")
-        if len(self.sum_pos_list) > 1:
-            board_canvas.create_line([calc_center(i, j) for i, j in self.prod_pos_list] + [calc_center(i, j) for i, j in self.sum_pos_list], width=line_width, fill=color, stipple="gray50", arrow="last", arrowshape=(30,30,15))
-        
-        pass
+        for center_x, center_y in sum_center_xys:
+            board_canvas.create_rectangle(center_x - side_len,
+                                          center_y - side_len,
+                                          center_x + side_len,
+                                          center_y + side_len,
+                                          fill=color, outline=color, stipple="gray25")
+        return
 
 @njit(nogil=True)
 def _numba_is_valid(assigned_board, sum_pos_list, prod_pos_list):
