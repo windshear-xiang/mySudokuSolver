@@ -1,7 +1,11 @@
 import numpy as np
 import time
 from numba import njit, prange
+import tkinter as tk
 from src.utils.ordinal import Ordinal, digit2ord
+from src.utils.coord_calc import *
+from src.config import BOARD_SIDE_LENGTH
+from src.utils.tkinter_polygon import create_approx_circle
 from . import DenseMultiCellConstraint
 
 class OrdArrowConstraint(DenseMultiCellConstraint):
@@ -21,7 +25,7 @@ class OrdArrowConstraint(DenseMultiCellConstraint):
     def info(self) -> str:
         sl = [f"({x},{y})" for x,y in self.sum_pos_list.tolist()]
         pl = [f"({x},{y})" for x,y in self.prod_pos_list.tolist()]
-        return f"OrdArrowConstraint\n{' + '.join(sl)} = {'*'.join(pl)}\n"
+        return f"{' * '.join(pl)} = {' + '.join(sl)}"
     
     def is_valid(self, assigned_board):
         return _numba_is_valid(assigned_board, self.sum_pos_list, self.prod_pos_list)
@@ -38,6 +42,31 @@ class OrdArrowConstraint(DenseMultiCellConstraint):
         )
         
         print(f"Preprocessed. combo_count={combo_count}. time={time.perf_counter() - time_counter:.6f}")
+        return
+    
+    def draw(self, board_canvas: tk.Canvas, color:str="gray"):
+        line_width = BOARD_SIDE_LENGTH * 0.25
+        radius = BOARD_SIDE_LENGTH * 0.4
+        side_len = BOARD_SIDE_LENGTH * 0.3
+
+        prod_center_xys = [calc_center(i, j) for i, j in self.prod_pos_list]
+        sum_center_xys = [calc_center(i, j) for i, j in self.sum_pos_list]
+        # arrow
+        board_canvas.create_line(prod_center_xys + sum_center_xys,
+                                 width=line_width, fill=color, stipple="gray50",
+                                 arrow="last", arrowshape=(line_width*2, line_width*2, line_width))
+        # prod
+        for center_x, center_y in prod_center_xys:
+            create_approx_circle(board_canvas,
+                                 center_x, center_y, radius,
+                                 fill=color, outline=color, width=2, stipple="gray50")
+        # sum
+        for center_x, center_y in sum_center_xys:
+            board_canvas.create_rectangle(center_x - side_len,
+                                          center_y - side_len,
+                                          center_x + side_len,
+                                          center_y + side_len,
+                                          fill=color, outline=color, stipple="gray25")
         return
 
 @njit(nogil=True)
@@ -60,7 +89,6 @@ def _numba_is_valid(assigned_board, sum_pos_list, prod_pos_list):
             board_prod = board_prod * digit2ord(assigned_board[x][y])
     return board_sum == board_prod
     
-
 @njit(nogil=True, parallel=True)
 def _numba_preprocess(valid_combinations: np.ndarray, cell_nums, rows, cols, sum_pos_list, prod_pos_list):
     combo_count = 0

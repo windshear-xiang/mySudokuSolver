@@ -58,7 +58,7 @@ git push origin main
       + [x] quick_drop会多做很多次检查，优化逻辑
     + [x] constraints已经高度优化了，preprocess可以numba加速
   + [x] 修改了算法，加上了uniqueness in blocks
-  + [ ] 计数器改成对象方法和属性，而不是类方法和属性
+  + [x] 计数器改成对象方法和属性，而不是类方法和属性
   + [ ] 优先查unknown，或者随机化，避免卡死在无解情况
   + [ ] 修整一下DenseMulticellConstraints等等类里乱七八糟的对象，少用列表
     + [ ] 能否实现一个统一的numba优化的DenseMulticellConstraints的preprocess？
@@ -74,9 +74,31 @@ git push origin main
   + [x] 加上不断自动计算
   + [x] 解决最后会认为无解的bug，应该是因为返回棋盘的settle全0
     + 直接从全0搜吧，这样可以避免很多bug
+    + [x] 是因为之前加预先quickdrop导致的bug
+    + [x] 忘了排除为0的格子不修改了，还有Bug
   + [x] 可以保存和读取棋盘的功能
   + [x] 序数显示功能
   + [x] 优化代码结构，以及显示constraints的功能
   + [x] 分离preprocess到数独内部，并且加入储存
-  + [ ] 压缩储存，稀疏矩阵？
+  + [x] 整理代码结构，分文件，使用MVC架构
+  + [x] 点auto的时候会自动求解一次
+  + [x] 求解的部分应该放在控制层，模型层是可以做历史记录的
+  + [x] 修改表格会自动中断
+  + [x] sl的编码放在model层
+  + [x] 撤销的功能
+  + [x] 把棋盘格子变成一整块canvas
   + [ ] 手动设定constraints的功能
+    + [x] 图形显示
+    + [x] 删除
+      + 太多bug了，还是deepcopy吧，祈祷能正常运行
+    + [ ] config constraint 的功能
+      + [ ] 修整constraint，改成格子+param
+    + [ ] 添加 constraint 的功能
+  + [ ] 加clear的功能
+  + [ ] 撤销和移动的按键绑定
+  + [ ] 更好的无解和冲突显示
+  + [ ] 改用ttk构造更好看的界面？
+  + [ ] 压缩储存，稀疏矩阵/位掩码/pickle？
+  + [ ] 记忆化的worker
+  
+  

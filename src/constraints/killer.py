@@ -2,7 +2,11 @@ import numpy as np
 import time
 from numba import njit, prange
 from typing import Sequence
+import tkinter as tk
 from . import DenseMultiCellConstraint
+from src.utils.coord_calc import *
+from src.config import BOARD_SIDE_LENGTH
+from src.utils.tkinter_polygon import create_cutted_rectangle
 from src.utils.type_definitions import *
 
 class KillerConstraint(DenseMultiCellConstraint):
@@ -13,7 +17,7 @@ class KillerConstraint(DenseMultiCellConstraint):
     @property
     def info(self) -> str:
         sl = [f"({x},{y})" for x,y in self.cell_positions.tolist()]
-        return f"KillerConstraint\n{' + '.join(sl)} = {self.killer_sum}\n"
+        return f"{' + '.join(sl)} = {self.killer_sum}"
     
     def is_valid(self, assigned_board: NumBoard) -> bool:
         return _numba_is_valid(assigned_board, self.rows, self.cols, self.killer_sum)
@@ -31,6 +35,42 @@ class KillerConstraint(DenseMultiCellConstraint):
         
         print(f"Preprocessed. combo_count={combo_count}. time={time.perf_counter() - time_counter:.6f}")
         return
+    
+    def draw(self, board_canvas: tk.Canvas, color:str="gray"):
+        pad = 10
+        text_size = 16
+        min_x0 = float("inf")
+        min_y0 = float("inf")
+        tupled_cell_positions = [(x, y) for x, y in self.cell_positions]
+        for (i, j) in tupled_cell_positions:
+            x0, y0 = calc_left_top(i, j)
+            x1, y1 = calc_right_bottom(i, j)
+            # 找出最左边的格子里最靠上的，用来放sum数字
+            if x0 <= min_x0:
+                min_x0 = x0
+                if y0 <= min_y0:
+                    min_y0 = y0
+            # 没有相邻的就往回缩
+            cut_top, cut_bottom, cut_left, cut_right = False, False, False, False
+            if (i, j+1) not in tupled_cell_positions:
+                cut_right = True
+            if (i, j-1) not in tupled_cell_positions:
+                cut_left = True
+            if (i+1, j) not in tupled_cell_positions:
+                cut_bottom = True
+            if (i-1, j) not in tupled_cell_positions:
+                cut_top = True
+            create_cutted_rectangle(board_canvas,
+                                    x0, y0, x1, y1,
+                                    cut_top=cut_top,
+                                    cut_bottom=cut_bottom,
+                                    cut_left=cut_left,
+                                    cut_right=cut_right,
+                                    pad=pad,
+                                    fill=color, outline="", stipple="gray50")
+        board_canvas.create_text(min_x0 + pad/2, min_y0 + pad/2, text=str(self.killer_sum),
+                                 font=('Arial', text_size), fill="red")
+
 
 @njit(nogil=True)
 def _numba_is_valid(board: np.ndarray, rows: np.ndarray, cols: np.ndarray, killer_sum: int) -> bool:

@@ -45,9 +45,9 @@ def test_performance(data_set, max_num_rows):
         puzzle = row["puzzle_matrix"]
 
         s = Sudoku(puzzle)
-        Sudoku.reset_counter()
+        s.reset_counter()
         ret = s.solve()
-        c_count, c_time = Sudoku.get_counter_stat()
+        c_count, c_time = s.get_counter_stat()
         t_count += c_count
         t_time += c_time
 

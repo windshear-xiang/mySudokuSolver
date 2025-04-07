@@ -1,4 +1,5 @@
-from src.ui.app import run
 from src.config import CONFIG_PUZZLE_BOARD, CONFIG_CONSTRAINTS
+from src.ui.controller import SudokuController
 
-run(CONFIG_PUZZLE_BOARD, CONFIG_CONSTRAINTS)
+ui = SudokuController(CONFIG_PUZZLE_BOARD, CONFIG_CONSTRAINTS)
+ui.view.root.mainloop()

@@ -37,9 +37,8 @@ def test_cand_1():
     killer_sum_2 = 10
     kc2 = KillerConstraint(pos_list_2, killer_sum_2)
 
-    Sudoku.reset_counter()
     s = Sudoku(puzzle, [kc1, kc2])
-    Sudoku.reset_counter()
     s.solve_true_candidates()
-    print(Sudoku.get_counter_stat())
+    sc, ct = s.get_counter_stat()
+    print(f"\n求解完成. {sc}steps, {ct:.3f}s, {ct/sc*1000:.4f}ms/step")
     assert s.print_true_candidates() == cands
