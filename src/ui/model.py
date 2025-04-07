@@ -22,12 +22,12 @@ class SudokuModel:
         # Constraints
         self.constraints = constraints
 
-        # 外界传入日志生成器
+        # controller传入的日志生成器
         self.log = log
 
         # 用于撤销和恢复的历史
         self.history = []
-        self.history_pointer = 0 # 指示当前历史版本 + 1
+        self.history_pointer = 0 # 指示当前历史版本编号
         self._build_new_history()
     
     def del_constraint(self, index):

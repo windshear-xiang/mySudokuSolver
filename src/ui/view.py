@@ -1,4 +1,6 @@
 """视图层
+
+Passive view 没有控制层调用就啥也不干，组件的回调函数也都写在控制层。
 """
 
 import numpy as np
@@ -44,7 +46,7 @@ class SudokuView:
         if event_type in self.event_callbacks:
             self.event_callbacks[event_type](*args)
         else:
-            self.log(f"ERROR: event_type {event_type} cannot be handled.")
+            self.log(f"ERROR: event_type={event_type} args={args} cannot be handled.")
 
     def bind_event(self, event_type, callback):
         """供 Controller 注册各类事件处理函数"""
@@ -86,41 +88,41 @@ class SudokuView:
 
         # 求解的按钮
         self.solve_button = tk.Button(self.control_frame, text="Solve True Candidates", command=lambda: self.handle_event("start_solver"))
-        self.solve_button.grid(row=1, column=0, padx=5, pady=10)
+        self.solve_button.grid(row=1, column=0, padx=5, pady=5)
 
         # 强行停止求解的按钮
         self.stop_button = tk.Button(self.control_frame, text="Force Stop", command=lambda: self.handle_event("stop_solver"))
-        self.stop_button.grid(row=1, column=1, padx=5, pady=10)
+        self.stop_button.grid(row=1, column=1, padx=5, pady=5)
 
         # 在控制区下方增加一行，用于 "Save" 和 "Load" 按钮
         self.sl_frame = tk.Frame(self.control_frame)
         self.sl_frame.grid(row=2, column=0, padx=5, pady=5)
 
         self.save_button = tk.Button(self.sl_frame, text="Save", command=lambda: self.handle_event("save"))
-        self.save_button.grid(row=0, column=0, padx=5, pady=10)
+        self.save_button.grid(row=0, column=0, padx=5, pady=5)
 
         self.load_button = tk.Button(self.sl_frame, text="Load", command=lambda: self.handle_event("load"))
-        self.load_button.grid(row=0, column=1, padx=5, pady=10)
+        self.load_button.grid(row=0, column=1, padx=5, pady=5)
 
         # 撤销和恢复
         self.unredo_frame = tk.Frame(self.control_frame)
         self.unredo_frame.grid(row=2, column=1, padx=5, pady=5)
 
         self.undo_button = tk.Button(self.unredo_frame, text="Undo", command=lambda: self.handle_event("undo"))
-        self.undo_button.grid(row=0, column=0, padx=5, pady=10)
+        self.undo_button.grid(row=0, column=0, padx=5, pady=5)
 
         self.redo_button = tk.Button(self.unredo_frame, text="Redo", command=lambda: self.handle_event("redo"))
-        self.redo_button.grid(row=0, column=1, padx=5, pady=10)
+        self.redo_button.grid(row=0, column=1, padx=5, pady=5)
 
         # 日志显示框（用于显示文字信息）
         self.log_label = tk.Label(self.side_frame, text="LOG")
-        self.log_label.pack(side=tk.TOP, anchor='w', padx=5, pady=(20, 0))
+        self.log_label.pack(side=tk.TOP, anchor='w', padx=5, pady=(15, 0))
         self.log_text = tk.Text(self.side_frame, width=SIDE_PANEL_WIDTH, height=18, state=tk.DISABLED)
         self.log_text.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
 
         # constraints 显示框，放在日志显示框下面
         self.constraint_label_frame = tk.Frame(self.side_frame, width=SIDE_PANEL_WIDTH)
-        self.constraint_label_frame.pack(side=tk.TOP, anchor='w', padx=5, pady=(20, 0))
+        self.constraint_label_frame.pack(side=tk.TOP, anchor='w', padx=5, pady=(15, 0))
 
         self.constraint_label = tk.Label(self.constraint_label_frame, text="Constraints")
         self.constraint_label.grid(row=0, column=0, padx=5, pady=5)
@@ -247,27 +249,119 @@ class SudokuView:
         if len(constraints) == 0:
             empty_label = tk.Label(self.constraint_container, text="None.")
             empty_label.pack(fill=tk.X, padx=2, pady=2)
-        # 为每个约束创建一个子 Frame，其内包含约束描述和删除按钮
-        for index, constraint in enumerate(constraints):
-            info = constraint.info
 
-            # 创建子 Frame（每行显示一条 constraint）
+        for index, constraint in enumerate(constraints):
+            constraint_name = constraint.__class__.__name__
+            constraint_info = constraint.info
+
+            # 为每个约束创建一个子 Frame，其内包含约束描述、参数输入框、修改和删除按钮
             row_frame = tk.Frame(self.constraint_container, borderwidth=1, relief="sunken")
             row_frame.pack(fill=tk.X, padx=2, pady=2)
 
+            # 放 label 和 config / delete button
+            label_button_frame = tk.Frame(row_frame)
+            label_button_frame.pack(side=tk.TOP, fill=tk.X)
             # Label 显示约束描述
-            label = tk.Label(row_frame, width=38, wraplength=250 ,text=f"C{index}: "+info)
-            label.grid(row=0, column=0, padx=2)
-
+            name_label = tk.Label(
+                label_button_frame,
+                width=SIDE_PANEL_WIDTH - 10,
+                anchor="w",
+                text=f"C{index}:  " + constraint_name)
+            name_label.grid(row=0, column=0, padx=2, pady=2)
+            # config按钮
+            config_button = tk.Button(
+                label_button_frame,
+                text="Config",
+                command=lambda index=index: self.handle_event("config_confirm_constraint", index)
+            )
+            config_button.grid(row=0, column=1, padx=2, pady=2)
             # 删除按钮，点击后调用 handle_event 并传入对应约束的id
             delete_button = tk.Button(
-                row_frame,
+                label_button_frame,
                 text="Del",
                 command=lambda index=index: self.handle_event("delete_constraint", index)
             )
-            delete_button.grid(row=0, column=1, padx=5, pady=5)
+            delete_button.grid(row=0, column=2, padx=2, pady=2)
+
+            # 显示 info
+            info_label = tk.Label(
+                row_frame,
+                width=SIDE_PANEL_WIDTH - 5,
+                anchor="w",
+                text=constraint_info)
+            info_label.pack(fill=tk.X, padx=2, pady=2)
+
+            # 显示 param
+            param_frame = tk.Frame(row_frame)
+            param_frame.pack(side=tk.TOP, fill=tk.X)
+            # param label
+            param_label = tk.Label(param_frame, text="Parameter: ")
+            param_label.grid(row=0, column=0, padx=2, pady=2)
+            # param entry
+            entry_var = tk.StringVar(value="test.") # TODO
+            param_entry = tk.Entry(
+                param_frame,
+                textvariable=entry_var,
+                state="readonly",
+                width=SIDE_PANEL_WIDTH - 15)
+            param_entry.grid(row=0, column=1, padx=2, pady=2)
+
         return
 
     def _draw_constraints(self, constraints):
         for constraint in constraints:
             constraint.draw(self.board_canvas)
+
+
+
+
+    # def on_add_constraint_clicked(self):
+    #     """
+    #     当点击添加约束按钮时，由 Controller 提供当前可用的约束列表，
+    #     这里为了示例直接使用一个假定的列表，后续 Controller 可调用 view.show_add_constraint_dialog(available_list, callback)
+    #     """
+    #     available_constraints = ["ConstraintA", "ConstraintB", "ConstraintC"]
+    #     # 此处传入的 callback 函数将在用户点击确认后被调用
+    #     self.show_add_constraint_dialog(available_constraints, self.handle_new_constraint)
+    
+    # def show_add_constraint_dialog(self, available_constraints: list, callback):
+    #     """
+    #     弹出一个对话框供用户选择约束类型和输入参数。
+        
+    #     参数:
+    #       available_constraints: 一个约束名称列表，填充在下拉选框中。
+    #       callback: 当用户点击确认时调用此方法，传入用户选择的约束类型和参数。
+    #     """
+    #     dialog = tk.Toplevel(self.root)
+    #     dialog.title("Add Constraint")
+    #     dialog.grab_set()  # 模态对话框，使用户在关闭对话框前无法点击主窗口
+
+    #     # 约束类型的下拉选框
+    #     tk.Label(dialog, text="Constraint Type:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+    #     constraint_type = tk.StringVar(value=available_constraints[0])
+    #     option_menu = tk.OptionMenu(dialog, constraint_type, *available_constraints)
+    #     option_menu.grid(row=0, column=1, padx=5, pady=5, sticky="w")
+        
+    #     # 参数的文本输入框
+    #     tk.Label(dialog, text="Parameters:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+    #     param_entry = tk.Entry(dialog, width=30)
+    #     param_entry.grid(row=1, column=1, padx=5, pady=5, sticky="w")
+        
+    #     # 确认按钮
+    #     def on_confirm():
+    #         sel_type = constraint_type.get()
+    #         params = param_entry.get().strip()
+    #         # 调用传入的回调函数，将选中的约束类型和参数传递出去
+    #         callback(sel_type, params)
+    #         dialog.destroy()  # 关闭对话框
+        
+    #     confirm_button = tk.Button(dialog, text="Confirm", command=on_confirm)
+    #     confirm_button.grid(row=2, column=0, columnspan=2, padx=5, pady=10)
+    
+    # def handle_new_constraint(self, constraint_type: str, params: str):
+    #     """
+    #     这个方法作为回调函数，在用户确认添加约束后被调用。
+    #     你可以在这里调用 Controller 提供的事件接口，传递用户选择的 constraint_type 和 params。
+    #     """
+    #     self.handle_event("add_constraint", constraint_type, params)
+    #     print(f"Add constraint: {constraint_type} with params: {params}")

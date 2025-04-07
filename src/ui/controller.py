@@ -1,4 +1,11 @@
 """控制器层
+
+其实更接近 MVP 的 Presenter 不过我们还是叫它控制层吧。
+
+所有和 ui 界面逻辑相关的逻辑都放在这里，而需要操作数据的内容都放在 model 层。
+调用求解器需要多线程，所以放在控制层，这是一个例外。
+
+控制器会不断读取 model 层的数据，然后传参调用 view 层去显示。
 """
 
 import tkinter as tk
@@ -17,12 +24,12 @@ class SudokuController:
         
         # 视图层
         self.view = SudokuView()
-        self.raw_logger = self.view.raw_logger
+        self.raw_logger = self.view.raw_logger # 从视图层构造日志生成器
 
         # 模型层
         self.model = SudokuModel(puzzle_board, constraints, self.raw_logger("model"))
 
-        # 从视图层构造日志生成器
+        # 控制层自用的日志生成器
         self.log = self.raw_logger("controller")
 
         # 控制层状态属性
