@@ -9,6 +9,7 @@ from src.utils.ordinal import digit2ord
 from src.ui.logger import Logger
 from src.config import BOARD_SIDE_LENGTH, SIDE_PANEL_WIDTH
 from src.utils.coord_calc import *
+from src.utils.type_definitions import *
 
 DIGIT_TO_ORD_STR = {n: str(digit2ord(n)) for n in range(1, 10)}
 
@@ -16,6 +17,8 @@ class SudokuView:
     def __init__(self) -> None:
         self.root = tk.Tk()
         self.root.title("Sudoku Solver")
+
+        # 日志生成器
         self.raw_logger = Logger(self._log_append)
         self.log = self.raw_logger("view")
 
@@ -133,7 +136,14 @@ class SudokuView:
         self.constraint_container = tk.Frame(self.side_frame, width=SIDE_PANEL_WIDTH, height=18, borderwidth=1, relief="groove")
         self.constraint_container.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
     
-    def update_display(self, curr_puzzle_board, curr_tuf_board, constraints, selected_cell):
+    def update_display(self,
+            curr_puzzle_board: NumBoard,
+            curr_tuf_board: TufBoard,
+            constraints: list,
+            selected_cell: Position | None,
+            constraint_cells: list,
+            setting_up_constraint_index: int | None
+        ):
         """在单一 Canvas 上绘制整个棋盘内容"""
         # 清除上一次的绘制
         self.board_canvas.delete("all")
@@ -142,11 +152,29 @@ class SudokuView:
             for j in range(9):
                 self._draw_cell_borders(i, j)
         # 画约束规则的显示
-        self._draw_constraints(constraints)
+        self._draw_constraints(
+            constraints,
+            setting_up_constraint_index
+        )
         # 绘制单元格内容
         for i in range(9):
             for j in range(9):
                 self._draw_cell_content(i, j, curr_puzzle_board, curr_tuf_board, selected_cell)
+        # 绘制 constraint cells 内容
+        for index, (i, j) in enumerate(constraint_cells):
+            self._draw_constraint_cell(i, j, index)
+    
+    def _draw_constraint_cell(self, i, j, index):
+        x0, y0 = calc_left_top(i, j)
+        x1, y1 = calc_right_bottom(i, j)
+        center_x , center_y = calc_center(i, j)
+        self.board_canvas.create_rectangle(
+            x0, y0, x1, y1, fill="dark blue", outline="", stipple="gray50"
+        )
+        self.board_canvas.create_text(
+            center_x, center_y, text=str(index), font=('Arial', 60), fill='white'
+        )
+
     
     def _draw_cell_content(self, i: int, j: int, curr_puzzle_board, curr_tuf_board, selected_cell):
         """绘制单元格内容"""
@@ -267,21 +295,21 @@ class SudokuView:
                 width=SIDE_PANEL_WIDTH - 10,
                 anchor="w",
                 text=f"C{index}:  " + constraint_name)
-            name_label.grid(row=0, column=0, padx=2, pady=2)
+            name_label.grid(row=0, column=0, padx=2, pady=0)
             # config按钮
             config_button = tk.Button(
                 label_button_frame,
                 text="Config",
                 command=lambda index=index: self.handle_event("config_confirm_constraint", index)
             )
-            config_button.grid(row=0, column=1, padx=2, pady=2)
+            config_button.grid(row=0, column=1, padx=2, pady=0)
             # 删除按钮，点击后调用 handle_event 并传入对应约束的id
             delete_button = tk.Button(
                 label_button_frame,
                 text="Del",
                 command=lambda index=index: self.handle_event("delete_constraint", index)
             )
-            delete_button.grid(row=0, column=2, padx=2, pady=2)
+            delete_button.grid(row=0, column=2, padx=2, pady=0)
 
             # 显示 info
             info_label = tk.Label(
@@ -308,9 +336,10 @@ class SudokuView:
 
         return
 
-    def _draw_constraints(self, constraints):
-        for constraint in constraints:
-            constraint.draw(self.board_canvas)
+    def _draw_constraints(self, constraints, setting_up_constraint_index: int | None):
+        for index, constraint in enumerate(constraints):
+            if index != setting_up_constraint_index:
+                constraint.draw(self.board_canvas)
 
 
 

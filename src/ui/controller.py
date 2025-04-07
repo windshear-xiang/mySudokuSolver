@@ -32,10 +32,16 @@ class SudokuController:
         # 控制层自用的日志生成器
         self.log = self.raw_logger("controller")
 
-        # 控制层状态属性
+        # 控制层状态属性 - 求解相关
         self.solving = False # 正在求解
         self.selected_cell = None # 当前选中的格子 (i, j)
         self.auto_solve_var = tk.BooleanVar(value=False) # 自动求解模式
+        # 控制层状态属性 - 限制规则相关
+        self.setting_up_constraint = False # 正在设置限制规则
+        self.setting_up_constraint_index = None # 在设置的限制规则的编号
+        # 这俩不用的时候记得清零
+        self.temp_constraint_cells = []
+        self.temp_constraint_params = {}
 
         # 求解线程通讯等
         self.solver_thread: threading.Thread | None = None # 求解线程
@@ -65,10 +71,14 @@ class SudokuController:
         self.view.auto_solve_cb.config(variable=self.auto_solve_var, command=self._auto_start_solver)
     
     def check_update(self):
-        self.view.update_display(self.model.curr_puzzle_board,
-                                 self.model.curr_tuf_board,
-                                 self.model.constraints,
-                                 self.selected_cell)
+        self.view.update_display(
+            self.model.curr_puzzle_board,
+            self.model.curr_tuf_board,
+            self.model.constraints,
+            self.selected_cell,
+            self.temp_constraint_cells,
+            self.setting_up_constraint_index
+        )
         self.listen_solver()
         self.view.root.after(REFRESH_TIME_INTERVAL, self.check_update)
 
@@ -167,6 +177,7 @@ class SudokuController:
                 self._auto_start_solver()
     
     def _auto_start_solver(self):
+        """可能需要自动求解的时候都调用它，它会自己判断目前是否是自动求解模式，以及目前是否正在求解"""
         if self.auto_solve_var.get():
             if self.solving:
                 self.log("目前在求解中，将中止并重新求解")
@@ -195,6 +206,7 @@ class SudokuController:
         self.solver_thread.start()
     
     def on_stop_solver(self):
+        """强行停止求解器"""
         self.log("试图停止求解线程...")
         self.stop_event.set()
     
