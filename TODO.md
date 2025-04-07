@@ -91,8 +91,11 @@ git push origin main
     + [x] 图形显示
     + [x] 删除
       + 太多bug了，还是deepcopy吧，祈祷能正常运行
-    + [ ] setup constraint 的功能
+    + [ ] config constraint 的功能
       + [x] 修整constraint，改成格子+param
+      + [x] enter
+      + [x] cancel
+      + [ ] confirm
     + [ ] 添加 constraint 的功能
   + [ ] 加clear的功能
   + [ ] 撤销和移动的按键绑定

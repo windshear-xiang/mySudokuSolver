@@ -30,10 +30,24 @@ class SudokuModel:
         self.history_pointer = 0 # 指示当前历史版本编号
         self._build_new_history()
     
+    def get_constraint_cells(self, index) -> list:
+        """返回第 index 个 constraint 的 cells"""
+        if index >= len(self.constraints):
+            self.log(f"访问的 constraint C{index} 不存在")
+            return []
+        return self.constraints[index].cells
+
+    def get_constraint_params(self, index) -> None | dict:
+        """返回第 index 个 constraint 的 params"""
+        if index >= len(self.constraints):
+            self.log(f"访问的 constraint C{index} 不存在")
+            return None
+        return self.constraints[index].params
+    
     def del_constraint(self, index):
         """返回是否真的删掉了"""
         if index >= len(self.constraints):
-            self.log(f"要删除的 constraint 不存在")
+            self.log(f"要删除的 constraint C{index} 不存在")
             return False
         self.log(f"已删除 C{index} {self.constraints[index].info}")
         self.constraints.pop(index)

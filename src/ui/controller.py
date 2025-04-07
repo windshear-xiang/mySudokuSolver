@@ -33,15 +33,16 @@ class SudokuController:
         self.log = self.raw_logger("controller")
 
         # 控制层状态属性 - 求解相关
-        self.solving = False # 正在求解
-        self.selected_cell = None # 当前选中的格子 (i, j)
+        self.solving: bool = False # 正在求解
+        self.selected_cell: tuple[int, int] | None = None # 当前选中的格子 (i, j)
         self.auto_solve_var = tk.BooleanVar(value=False) # 自动求解模式
+
         # 控制层状态属性 - 限制规则相关
-        self.setting_up_constraint = False # 正在设置限制规则
-        self.setting_up_constraint_index = None # 在设置的限制规则的编号
+        self.config_constraint: bool = False # 正在设置限制规则
+        self.config_constraint_index: int | None = None # 在设置的限制规则的编号
         # 这俩不用的时候记得清零
-        self.temp_constraint_cells = []
-        self.temp_constraint_params = {}
+        self.temp_constraint_cells: list = []
+        self.temp_constraint_params: dict[str, tk.Variable] = {}
 
         # 求解线程通讯等
         self.solver_thread: threading.Thread | None = None # 求解线程
@@ -65,6 +66,9 @@ class SudokuController:
         self.view.bind_event("undo", self.on_undo)
         self.view.bind_event("redo", self.on_redo)
         self.view.bind_event("delete_constraint", self.on_delete_constraint)
+        self.view.bind_event("enter_config_constraint", self.on_enter_config_constraint)
+        self.view.bind_event("exit_config_constraint", self.on_exit_config_constraint)
+        self.view.bind_event("confirm_config_constraint", self.on_confirm_config_constraint)
         # 绑定键盘事件（全局绑定，编辑状态下处理数字和删除操作）
         self.view.root.bind("<Key>", self.on_key_pressed)
         # 自动求解勾选框，勾选的时候也会自动求解一次
@@ -77,14 +81,65 @@ class SudokuController:
             self.model.constraints,
             self.selected_cell,
             self.temp_constraint_cells,
-            self.setting_up_constraint_index
+            self.config_constraint_index
         )
         self.listen_solver()
         self.view.root.after(REFRESH_TIME_INTERVAL, self.check_update)
 
+    def on_enter_config_constraint(self, index):
+        """进入 config constraint 的模式"""
+
+        # 这一步模型层会检查能不能找到这个constraint
+        c_params = self.model.get_constraint_params(index)
+        if c_params is None:
+            return
+
+        # 进入config模式，会禁用按键、改变click逻辑等等
+        self.config_constraint = True
+        self.config_constraint_index = index
+        self.selected_cell = None
+
+        # 从model获取临时的cells和params
+        self.temp_constraint_cells = self.model.get_constraint_cells(index)
+        self.temp_constraint_params = {
+            key: tk.Variable(value=value) for key, value in c_params.items()
+        }
+
+        return self.on_refresh_constraints()
+
+    def on_exit_config_constraint(self):
+        """退出 config constraint 的模式"""
+        
+        # 全部恢复原样
+        self.config_constraint = False
+        self.config_constraint_index = None
+        self.temp_constraint_cells = []
+        self.temp_constraint_params = {}
+
+        return self.on_refresh_constraints()
+
+    def on_confirm_config_constraint(self, index):
+        """在进入了 config constraint 的模式之后，确认修改"""
+        c_params = {key: var.get() for key, var in self.temp_constraint_params.items()}
+        print(c_params)
+        # TODO
+
     def on_refresh_constraints(self):
         """假装存在一个按钮叫：刷新 constraints 显示列表"""
-        self.view.refresh_constraints_panel(self.model.constraints)
+
+        c_dicts = []
+        for index, constraint in enumerate(self.model.constraints):
+            c_dict = {}
+            c_dict["name"] = constraint.__class__.__name__
+            c_dict["info"] = constraint.info
+            if index == self.config_constraint_index:
+                c_dict["params"] = self.temp_constraint_params
+            c_dicts.append(c_dict)
+
+        self.view.refresh_constraints_panel(
+            c_dicts,
+            self.config_constraint_index
+        )
     
     def on_delete_constraint(self, index):
         if self.solving:

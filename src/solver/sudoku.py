@@ -272,12 +272,12 @@ class Sudoku:
             res.append([[n+1 for n in range(9) if self.tuf_board[i,j,n] == 1] for j in range(9)])
         return res
 
-def has_conflict(board: NumBoard, pos: Position, num: int) -> bool:
-    i, j = pos
-    ret = np.all(board[i, :] != num)
-    ret &= np.all(board[:, j] != num)
-    xb = (i // 3) * 3
-    yb = (j // 3) * 3
-    ret &= np.all(board[xb:xb+3, yb:yb+3] != num)
-    return not ret
+# def has_conflict(board: NumBoard, pos: Position, num: int) -> bool:
+#     i, j = pos
+#     ret = np.all(board[i, :] != num)
+#     ret &= np.all(board[:, j] != num)
+#     xb = (i // 3) * 3
+#     yb = (j // 3) * 3
+#     ret &= np.all(board[xb:xb+3, yb:yb+3] != num)
+#     return not ret
 
