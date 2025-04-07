@@ -7,7 +7,7 @@ import numpy as np
 import tkinter as tk
 from src.utils.ordinal import digit2ord
 from src.ui.logger import Logger
-from src.config import BOARD_SIDE_LENGTH, SIDE_PANEL_WIDTH
+from src.ui.ui_config import BOARD_SIDE_LENGTH, SIDE_PANEL_WIDTH
 from src.utils.coord_calc import *
 from src.utils.type_definitions import *
 

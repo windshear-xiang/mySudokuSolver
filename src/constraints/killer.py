@@ -5,14 +5,25 @@ from typing import Sequence
 import tkinter as tk
 from . import DenseMultiCellConstraint
 from src.utils.coord_calc import *
-from src.config import BOARD_SIDE_LENGTH
+from src.ui.ui_config import BOARD_SIDE_LENGTH
 from src.utils.tkinter_polygon import create_cutted_rectangle
 from src.utils.type_definitions import *
 
 class KillerConstraint(DenseMultiCellConstraint):
-    def __init__(self, ls: Sequence[Position], killer_sum: int, prep_at_init: bool = True) -> None:
-        self.killer_sum = killer_sum
-        super().__init__(ls, prep_at_init=prep_at_init)
+
+    @staticmethod
+    def create_constraint(cells, killer_sum, prep_at_init: bool = True):
+        """用传统方法生成 Constraint 对象的工厂方法"""
+        return KillerConstraint(
+            cells,
+            {"killer_sum": killer_sum},
+            prep_at_init
+        )
+
+    def initialize(self, cells, params, prep_at_init: bool = True):
+        self.killer_sum = params["killer_sum"]
+        assert isinstance(self.killer_sum, int)
+        return super().initialize(cells, params, prep_at_init)
     
     @property
     def info(self) -> str:
@@ -70,7 +81,6 @@ class KillerConstraint(DenseMultiCellConstraint):
                                     fill=color, outline="", stipple="gray50")
         board_canvas.create_text(min_x0 + pad/2, min_y0 + pad/2, text=str(self.killer_sum),
                                  font=('Arial', text_size), fill="red")
-
 
 @njit(nogil=True)
 def _numba_is_valid(board: np.ndarray, rows: np.ndarray, cols: np.ndarray, killer_sum: int) -> bool:

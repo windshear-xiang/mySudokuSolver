@@ -31,11 +31,11 @@ def test_cand_1():
 
     pos_list_1 = [(1,1), (1,2), (1,3), (2,3), (2,4), (2,5)]
     killer_sum_1 = 26
-    kc1 = KillerConstraint(pos_list_1, killer_sum_1)
+    kc1 = KillerConstraint.create_constraint(pos_list_1, killer_sum_1)
 
     pos_list_2 = [(1,8), (2,8)]
     killer_sum_2 = 10
-    kc2 = KillerConstraint(pos_list_2, killer_sum_2)
+    kc2 = KillerConstraint.create_constraint(pos_list_2, killer_sum_2)
 
     s = Sudoku(puzzle, [kc1, kc2])
     s.solve_true_candidates()
