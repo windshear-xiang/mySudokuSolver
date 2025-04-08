@@ -20,8 +20,9 @@ class OrdArrowConstraint(DenseMultiCellConstraint):
         )
 
     def initialize(self, cells, params, prep_at_init: bool = True):
-        self.prod_len = params["prod_len"]
-        assert isinstance(self.prod_len, int)
+        self.prod_len = int(params["prod_len"])
+        if not 0 < self.prod_len < len(cells):
+            raise ValueError(f"Invalid parame prod_len={self.prod_len}, should be [1, {len(cells)-1}].")
         return super().initialize(cells, params, prep_at_init)
 
     @property
@@ -37,6 +38,10 @@ class OrdArrowConstraint(DenseMultiCellConstraint):
         sl = [f"({x},{y})" for x,y in self.sum_pos_list.tolist()]
         pl = [f"({x},{y})" for x,y in self.prod_pos_list.tolist()]
         return f"{' * '.join(pl)} = {' + '.join(sl)}"
+    
+    @property
+    def param_names(self):
+        return ["prod_len"]
     
     def is_valid(self, assigned_board):
         return _numba_is_valid(assigned_board, self.sum_pos_list, self.prod_pos_list)

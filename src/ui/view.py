@@ -61,16 +61,26 @@ class SudokuView:
         self.board_canvas = tk.Canvas(self.root, width=board_size, height=board_size, bg="white", highlightthickness=0)
         # 将棋盘 Canvas 放在主界面左侧（例如：grid(row=0, column=0)）
         self.board_canvas.grid(row=0, column=0, padx=0, pady=0)
-        self.board_canvas.bind("<Button-1>", self._on_board_click)
+        self.board_canvas.bind("<Button-1>", self._on_left_board_click)
+        self.board_canvas.bind("<Button-3>", self._on_right_board_click)
     
-    def _on_board_click(self, event):
+    def _on_left_board_click(self, event):
         """
-        根据鼠标点击的坐标计算所在单元格 (i, j)
+        根据鼠标左键点击的坐标计算所在单元格 (i, j)
         然后调用 handle_event 通知 Controller 进行处理。
         """
         col = event.x // BOARD_SIDE_LENGTH
         row = event.y // BOARD_SIDE_LENGTH
-        self.handle_event("cell_click", row, col)
+        self.handle_event("left_cell_click", row, col)
+    
+    def _on_right_board_click(self, event):
+        """
+        根据鼠标左键点击的坐标计算所在单元格 (i, j)
+        然后调用 handle_event 通知 Controller 进行处理。
+        """
+        col = event.x // BOARD_SIDE_LENGTH
+        row = event.y // BOARD_SIDE_LENGTH
+        self.handle_event("right_cell_click", row, col)
     
     def _build_side_panel(self):
         """创建右侧控制面板"""
@@ -166,14 +176,15 @@ class SudokuView:
     
     def _draw_constraints(self, constraints, config_constraint_index: int | None):
         for index, constraint in enumerate(constraints):
-            constraint.draw(self.board_canvas)
+            if index != config_constraint_index:
+                constraint.draw(self.board_canvas)
 
     def _draw_constraint_cell(self, i, j, index):
         x0, y0 = calc_left_top(i, j)
         x1, y1 = calc_right_bottom(i, j)
         center_x , center_y = calc_center(i, j)
         self.board_canvas.create_rectangle(
-            x0, y0, x1, y1, fill="magenta", outline="", stipple="gray75"
+            x0, y0, x1, y1, fill="magenta", outline="", stipple="gray50"
         )
         self.board_canvas.create_text(
             center_x, center_y, text=str(index), font=('Arial', 60), fill='white'
@@ -323,7 +334,7 @@ class SudokuView:
         confirm_button = tk.Button(
             label_button_frame,
             text="Confirm",
-            command=lambda index=index: self.handle_event("confirm_config_constraint", index)
+            command=lambda index=index: self.handle_event("confirm_config_constraint")
         )
         confirm_button.pack(side=tk.RIGHT, padx=2, pady=2)
 
@@ -382,6 +393,7 @@ class SudokuView:
             row_frame,
             width=SIDE_PANEL_WIDTH - 10,
             anchor="w",
+            wraplength=300,
             text=constraint_info)
         info_label.pack(fill=tk.X, padx=2, pady=2)
 

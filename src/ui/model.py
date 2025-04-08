@@ -31,19 +31,35 @@ class SudokuModel:
         self._build_new_history()
     
     def get_constraint_cells(self, index) -> list:
-        """返回第 index 个 constraint 的 cells"""
+        """返回第 index 个 constraint 的 cells 的副本"""
         if index >= len(self.constraints):
             self.log(f"访问的 constraint C{index} 不存在")
             return []
-        return self.constraints[index].cells
+        return deepcopy(self.constraints[index].cells)
 
     def get_constraint_params(self, index) -> None | dict:
-        """返回第 index 个 constraint 的 params"""
+        """返回第 index 个 constraint 的 params 的副本"""
         if index >= len(self.constraints):
             self.log(f"访问的 constraint C{index} 不存在")
             return None
-        return self.constraints[index].params
+        return deepcopy(self.constraints[index].params)
     
+    def config_constraint(self, cells, params, index):
+        """用参数 cells, params 重新生成 constraint 替换 index 位置的"""
+        if index >= len(self.constraints):
+            self.log(f"要修改的 constraint C{index} 不存在")
+            return False
+        ConstraintClass = self.constraints[index].__class__
+        try:
+            new_constraint = ConstraintClass(cells=cells, params=params, prep_at_init=False)
+        except Exception as e:
+            self.log(f"修改 constraint C{index} 失败: {str(e)}")
+            return False
+        else:
+            self.constraints[index] = new_constraint
+            self._build_new_history()
+            return True
+
     def del_constraint(self, index):
         """返回是否真的删掉了"""
         if index >= len(self.constraints):

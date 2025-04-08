@@ -58,7 +58,8 @@ class SudokuController:
     
     def _bind_events(self):
         """注册视图层事件到控制层处理函数"""
-        self.view.bind_event("cell_click", self.on_cell_click)
+        self.view.bind_event("left_cell_click", self.on_left_cell_click)
+        self.view.bind_event("right_cell_click", self.on_right_cell_click)
         self.view.bind_event("start_solver", self.on_start_solver)
         self.view.bind_event("stop_solver", self.on_stop_solver)
         self.view.bind_event("save", self.on_save)
@@ -86,8 +87,30 @@ class SudokuController:
         self.listen_solver()
         self.view.root.after(REFRESH_TIME_INTERVAL, self.check_update)
 
+    def on_left_cell_click(self, i: int, j: int):
+        if self.config_constraint:
+            # 目前正在修改constraint状态
+            self.selected_cell = None
+            if (i, j) not in self.temp_constraint_cells:
+                self.temp_constraint_cells.append((i, j))
+        else:
+            # 目前正在普通状态
+            self.selected_cell = (i, j)
+        return
+    
+    def on_right_cell_click(self, i: int, j: int):
+        if self.config_constraint:
+            # 目前正在修改constraint状态
+            if (i, j) in self.temp_constraint_cells:
+                self.temp_constraint_cells.remove((i, j))
+        return
+
     def on_enter_config_constraint(self, index):
         """进入 config constraint 的模式"""
+
+        if self.solving:
+            self.log("求解中，不能修改限制规则")
+            return
 
         # 这一步模型层会检查能不能找到这个constraint
         c_params = self.model.get_constraint_params(index)
@@ -118,11 +141,18 @@ class SudokuController:
 
         return self.on_refresh_constraints()
 
-    def on_confirm_config_constraint(self, index):
+    def on_confirm_config_constraint(self):
         """在进入了 config constraint 的模式之后，确认修改"""
         c_params = {key: var.get() for key, var in self.temp_constraint_params.items()}
-        print(c_params)
-        # TODO
+        succ = self.model.config_constraint(
+            self.temp_constraint_cells,
+            c_params,
+            self.config_constraint_index
+        )
+        if succ:
+            self.on_exit_config_constraint()
+            self._auto_start_solver()
+        return
 
     def on_refresh_constraints(self):
         """假装存在一个按钮叫：刷新 constraints 显示列表"""
@@ -143,7 +173,7 @@ class SudokuController:
     
     def on_delete_constraint(self, index):
         if self.solving:
-            self.log("目前在求解中，不能删除 constraint")
+            self.log("求解中，不能删除限制规则")
             return
         if self.model.del_constraint(index):
             self.on_refresh_constraints()
@@ -152,8 +182,12 @@ class SudokuController:
 
     def on_save(self):
         if self.solving:
-            self.log("目前在求解中，不能保存")
+            self.log("求解中，不能保存存档")
             return
+        if self.config_constraint:
+            self.log("正在修改限制规则，不能保存存档")
+            return
+        
         self.log("试图储存当前棋盘")
         file_path = filedialog.asksaveasfilename(
             defaultextension=".json",
@@ -174,8 +208,12 @@ class SudokuController:
 
     def on_load(self):
         if self.solving:
-            self.log("目前在求解中，不能读取")
+            self.log("求解中，不能读取存档")
             return
+        if self.config_constraint:
+            self.log("目前正在修改限制规则，不能读取存档")
+            return
+        
         self.log("试图读取棋盘")
         file_path = filedialog.askopenfilename(
             defaultextension=".json",
@@ -197,29 +235,35 @@ class SudokuController:
         
     def on_undo(self):
         if self.solving:
-            self.log("目前在求解中，不能撤销操作")
+            self.log("求解中，不能撤销操作")
             return
+        if self.config_constraint:
+            self.log("目前正在修改限制规则，不能撤销操作")
+            return
+        
         if self.model.to_prev_history():
             self.on_refresh_constraints()
             self._auto_start_solver()
 
     def on_redo(self):
         if self.solving:
-            self.log("目前在求解中，不能恢复操作")
+            self.log("求解中，不能恢复操作")
             return
+        if self.config_constraint:
+            self.log("目前正在修改限制规则，不能恢复操作")
+            return
+        
         if self.model.to_next_history():
             self.on_refresh_constraints()
             self._auto_start_solver()
     
-    def on_cell_click(self, i: int, j: int):
-        self.selected_cell = (i, j)       
-    
     def on_key_pressed(self, event):
         if self.solving and not self.auto_solve_var.get():
-            self.log("目前在求解中，不能修改棋盘")
+            self.log("求解中，不能修改棋盘")
             return
         if self.selected_cell is None:
             return
+        
         i, j = self.selected_cell
         if len(event.char) == 1 and event.char.isdigit() and event.char != '0':
             # 如果按下数字键1~9，则设定该格的值，并标记为用户输入
@@ -233,10 +277,13 @@ class SudokuController:
     
     def _auto_start_solver(self):
         """可能需要自动求解的时候都调用它，它会自己判断目前是否是自动求解模式，以及目前是否正在求解"""
+        if self.config_constraint:
+            return
         if self.auto_solve_var.get():
             if self.solving:
-                self.log("目前在求解中，将中止并重新求解")
-                self.on_stop_solver()
+                if not self.stop_event.is_set():
+                    self.log("求解中，将中止并重新求解")
+                    self.on_stop_solver()
                 self.view.root.after(REFRESH_TIME_INTERVAL, self._auto_start_solver)
                 return
             self.on_start_solver()
@@ -244,8 +291,12 @@ class SudokuController:
     def on_start_solver(self):
         """启动求解器"""
         if self.solving:
-            self.log("目前已经在求解中，不能重复启动")
+            self.log("已经在求解中，不能重复启动")
             return
+        if self.config_constraint:
+            self.log("目前正在修改限制规则，不能求解")
+            return
+        
         self.solving = True
         self.stop_event.clear()
         # 构造数独对象
