@@ -21,14 +21,17 @@ class KillerConstraint(DenseMultiCellConstraint):
         )
 
     def initialize(self, cells, params, prep_at_init: bool = True):
-        self.killer_sum = params["killer_sum"]
-        assert isinstance(self.killer_sum, int)
+        self.killer_sum = int(params["killer_sum"])
         return super().initialize(cells, params, prep_at_init)
     
     @property
     def info(self) -> str:
         sl = [f"({x},{y})" for x,y in self.cell_positions.tolist()]
         return f"{' + '.join(sl)} = {self.killer_sum}"
+    
+    @property
+    def param_names(self):
+        return ["killer_sum"]
     
     def is_valid(self, assigned_board: NumBoard) -> bool:
         return _numba_is_valid(assigned_board, self.rows, self.cols, self.killer_sum)

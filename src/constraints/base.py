@@ -17,11 +17,12 @@ class BaseConstraint(ABC):
         用户请不要改动:
             + `__init__()` 方法：构造函数，接收 cells 和 params 为前两个参数\n
               **注意：对象必须要能够仅用 `cells` 和 `params` 的内容完整重构出来**
-            + `cells` 属性：返回 constraint 所涉及的格子坐标
-            + `params` 属性：返回 constraint 所涉及的其他参数
+            + `cells` 属性：返回所涉及的格子坐标
+            + `params` 属性：返回所涉及的其他参数
         用户必须自己在子类里实现：
             + `initialize()` 方法：用户自定义的初始化，`__init__()` 的参数会原样传进来
             + `info` 属性：用来打印展示的内容信息
+            + `param_names` 属性：初始化需要用到的其他参数的名称列表
             + `is_valid()` 方法：检查棋盘是否满足限制规则
             + `draw()` 方法：在棋盘上绘制出限制规则
         推荐用户实现，但不是必须:
@@ -62,6 +63,12 @@ class BaseConstraint(ABC):
     def params(self) -> dict[str, Any]:
         """返回 constraint 所涉及的其他参数，请不要改动这个属性"""
         return self._params
+    
+    @property
+    @abstractmethod
+    def param_names(self) -> list[str]:
+        """返回初始化需要用到的 param 参数的名称列表"""
+        pass
     
     @abstractmethod
     def is_valid(self, assigned_board: NumBoard) -> bool:
