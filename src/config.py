@@ -2,9 +2,6 @@
 主程序会读取这里定义的 `CONFIG_PUZZLE_BOARD` 和 `CONFIG_CONSTRAINTS` 两个常量，并以此为基础启动app
 '''
 
-BOARD_SIDE_LENGTH = 90
-SIDE_PANEL_WIDTH = 45
-
 import numpy as np
 from src.constraints import OrdArrowConstraint, KillerConstraint
 
@@ -22,7 +19,7 @@ CONFIG_PUZZLE_BOARD = np.array([
 
 sum_pos_list = [(1,2), (2,3), (1,4)]
 prod_pos_list = [(0,0), (1,1)]
-oac = OrdArrowConstraint(sum_pos_list, prod_pos_list, prep_at_init=False)
+oac = OrdArrowConstraint.create_constraint(sum_pos_list, prod_pos_list, prep_at_init=False)
 
 CONFIG_CONSTRAINTS = [oac]
 
@@ -42,10 +39,10 @@ CONFIG_CONSTRAINTS = [oac]
 
 # pos_list_1 = [(1,1), (1,2), (1,3), (2,3), (2,4), (2,5)]
 # killer_sum_1 = 26
-# kc1 = KillerConstraint(pos_list_1, killer_sum_1, prep_at_init=False)
+# kc1 = KillerConstraint.create_constraint(pos_list_1, killer_sum_1, prep_at_init=False)
 
 # pos_list_2 = [(1,8), (2,8)]
 # killer_sum_2 = 10
-# kc2 = KillerConstraint(pos_list_2, killer_sum_2, prep_at_init=False)
+# kc2 = KillerConstraint.create_constraint(pos_list_2, killer_sum_2, prep_at_init=False)
 
 # CONFIG_CONSTRAINTS = [kc1, kc2]

@@ -4,22 +4,33 @@ from numba import njit, prange
 import tkinter as tk
 from src.utils.ordinal import Ordinal, digit2ord
 from src.utils.coord_calc import *
-from src.config import BOARD_SIDE_LENGTH
+from src.ui.ui_config import BOARD_SIDE_LENGTH
 from src.utils.tkinter_polygon import create_approx_circle
 from . import DenseMultiCellConstraint
 
 class OrdArrowConstraint(DenseMultiCellConstraint):
-    def __init__(self, sum_pos_list: list, prod_pos_list: list, prep_at_init: bool = True):
-        self.sum_len = len(sum_pos_list)
-        super().__init__(sum_pos_list + prod_pos_list, prep_at_init=prep_at_init)
+
+    @staticmethod
+    def create_constraint(sum_pos_list, prod_pos_list, prep_at_init: bool = True):
+        """用传统方法生成 Constraint 对象的工厂方法"""
+        return OrdArrowConstraint(
+            prod_pos_list + sum_pos_list,
+            {"prod_len": len(prod_pos_list)},
+            prep_at_init
+        )
+
+    def initialize(self, cells, params, prep_at_init: bool = True):
+        self.prod_len = params["prod_len"]
+        assert isinstance(self.prod_len, int)
+        return super().initialize(cells, params, prep_at_init)
 
     @property
     def sum_pos_list(self):
-        return self.cell_positions[0:self.sum_len]
+        return self.cell_positions[self.prod_len : ]
     
     @property
     def prod_pos_list(self):
-        return self.cell_positions[self.sum_len:]
+        return self.cell_positions[0 : self.prod_len]
     
     @property
     def info(self) -> str:

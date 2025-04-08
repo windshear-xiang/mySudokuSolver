@@ -59,7 +59,7 @@ git push origin main
     + [x] constraints已经高度优化了，preprocess可以numba加速
   + [x] 修改了算法，加上了uniqueness in blocks
   + [x] 计数器改成对象方法和属性，而不是类方法和属性
-  + [ ] 优先查unknown，或者随机化，避免卡死在无解情况
+  + [ ] 优先查unknown，或者有解的，或者随机化，避免卡死在无解情况
   + [ ] 修整一下DenseMulticellConstraints等等类里乱七八糟的对象，少用列表
     + [ ] 能否实现一个统一的numba优化的DenseMulticellConstraints的preprocess？
   + [ ] 多进程的solve_true_candidate
@@ -92,7 +92,10 @@ git push origin main
     + [x] 删除
       + 太多bug了，还是deepcopy吧，祈祷能正常运行
     + [ ] config constraint 的功能
-      + [ ] 修整constraint，改成格子+param
+      + [x] 修整constraint，改成格子+param
+      + [x] enter
+      + [x] cancel
+      + [ ] confirm
     + [ ] 添加 constraint 的功能
   + [ ] 加clear的功能
   + [ ] 撤销和移动的按键绑定

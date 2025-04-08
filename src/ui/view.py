@@ -7,8 +7,9 @@ import numpy as np
 import tkinter as tk
 from src.utils.ordinal import digit2ord
 from src.ui.logger import Logger
-from src.config import BOARD_SIDE_LENGTH, SIDE_PANEL_WIDTH
+from src.ui.ui_config import BOARD_SIDE_LENGTH, SIDE_PANEL_WIDTH
 from src.utils.coord_calc import *
+from src.utils.type_definitions import *
 
 DIGIT_TO_ORD_STR = {n: str(digit2ord(n)) for n in range(1, 10)}
 
@@ -16,6 +17,8 @@ class SudokuView:
     def __init__(self) -> None:
         self.root = tk.Tk()
         self.root.title("Sudoku Solver")
+
+        # 日志生成器
         self.raw_logger = Logger(self._log_append)
         self.log = self.raw_logger("view")
 
@@ -133,7 +136,14 @@ class SudokuView:
         self.constraint_container = tk.Frame(self.side_frame, width=SIDE_PANEL_WIDTH, height=18, borderwidth=1, relief="groove")
         self.constraint_container.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
     
-    def update_display(self, curr_puzzle_board, curr_tuf_board, constraints, selected_cell):
+    def update_display(self,
+            curr_puzzle_board: NumBoard,
+            curr_tuf_board: TufBoard,
+            constraints: list,
+            selected_cell: Position | None,
+            constraint_cells: list,
+            config_constraint_index: int | None
+        ):
         """在单一 Canvas 上绘制整个棋盘内容"""
         # 清除上一次的绘制
         self.board_canvas.delete("all")
@@ -142,12 +152,33 @@ class SudokuView:
             for j in range(9):
                 self._draw_cell_borders(i, j)
         # 画约束规则的显示
-        self._draw_constraints(constraints)
+        self._draw_constraints(
+            constraints,
+            config_constraint_index
+        )
         # 绘制单元格内容
         for i in range(9):
             for j in range(9):
                 self._draw_cell_content(i, j, curr_puzzle_board, curr_tuf_board, selected_cell)
+        # 绘制 constraint cells 内容
+        for index, (i, j) in enumerate(constraint_cells):
+            self._draw_constraint_cell(i, j, index)
     
+    def _draw_constraints(self, constraints, config_constraint_index: int | None):
+        for index, constraint in enumerate(constraints):
+            constraint.draw(self.board_canvas)
+
+    def _draw_constraint_cell(self, i, j, index):
+        x0, y0 = calc_left_top(i, j)
+        x1, y1 = calc_right_bottom(i, j)
+        center_x , center_y = calc_center(i, j)
+        self.board_canvas.create_rectangle(
+            x0, y0, x1, y1, fill="magenta", outline="", stipple="gray75"
+        )
+        self.board_canvas.create_text(
+            center_x, center_y, text=str(index), font=('Arial', 60), fill='white'
+        )
+
     def _draw_cell_content(self, i: int, j: int, curr_puzzle_board, curr_tuf_board, selected_cell):
         """绘制单元格内容"""
         # 计算单元格在 board_canvas 上的坐标
@@ -241,77 +272,118 @@ class SudokuView:
                                               text=str(num),
                                               font=('Arial', 12), fill=color)
 
-    def refresh_constraints_panel(self, constraints):
+    def refresh_constraints_panel(self,
+            constraint_dicts: list[dict],
+            config_constraint_index: int | None
+        ):
         # 先清空原有内容
         for old_widget in self.constraint_container.winfo_children():
             old_widget.destroy()
 
-        if len(constraints) == 0:
+        if len(constraint_dicts) == 0:
             empty_label = tk.Label(self.constraint_container, text="None.")
             empty_label.pack(fill=tk.X, padx=2, pady=2)
+            return
 
-        for index, constraint in enumerate(constraints):
-            constraint_name = constraint.__class__.__name__
-            constraint_info = constraint.info
-
+        for index, c_dict in enumerate(constraint_dicts):
             # 为每个约束创建一个子 Frame，其内包含约束描述、参数输入框、修改和删除按钮
             row_frame = tk.Frame(self.constraint_container, borderwidth=1, relief="sunken")
             row_frame.pack(fill=tk.X, padx=2, pady=2)
 
-            # 放 label 和 config / delete button
-            label_button_frame = tk.Frame(row_frame)
-            label_button_frame.pack(side=tk.TOP, fill=tk.X)
-            # Label 显示约束描述
-            name_label = tk.Label(
-                label_button_frame,
-                width=SIDE_PANEL_WIDTH - 10,
-                anchor="w",
-                text=f"C{index}:  " + constraint_name)
-            name_label.grid(row=0, column=0, padx=2, pady=2)
-            # config按钮
-            config_button = tk.Button(
-                label_button_frame,
-                text="Config",
-                command=lambda index=index: self.handle_event("config_confirm_constraint", index)
-            )
-            config_button.grid(row=0, column=1, padx=2, pady=2)
-            # 删除按钮，点击后调用 handle_event 并传入对应约束的id
-            delete_button = tk.Button(
-                label_button_frame,
-                text="Del",
-                command=lambda index=index: self.handle_event("delete_constraint", index)
-            )
-            delete_button.grid(row=0, column=2, padx=2, pady=2)
+            if index == config_constraint_index:
+                self._build_config_constraint_row(row_frame, c_dict, index)
+            else:
+                self._build_normal_constraint_row(row_frame, c_dict, index)
+    
+        return
+    
+    def _build_config_constraint_row(self, row_frame: tk.Frame, constraint_dict: dict, index: int):
 
-            # 显示 info
-            info_label = tk.Label(
-                row_frame,
-                width=SIDE_PANEL_WIDTH - 5,
-                anchor="w",
-                text=constraint_info)
-            info_label.pack(fill=tk.X, padx=2, pady=2)
+        constraint_name = constraint_dict["name"]
+        constraint_info = "Configuring..."
+        constraint_params = constraint_dict["params"]
 
-            # 显示 param
+        # 放 label 和 config / delete button
+        label_button_frame = tk.Frame(row_frame)
+        label_button_frame.pack(side=tk.TOP, fill=tk.X)
+        # Label 显示约束描述
+        name_label = tk.Label(
+            label_button_frame,
+            anchor="w",
+            text=f"C{index}: " + constraint_name)
+        name_label.pack(side=tk.LEFT, padx=2, pady=2)
+        # 取消按钮，退出config状态
+        cancel_button = tk.Button(
+            label_button_frame,
+            text="Cancel",
+            command=lambda index=index: self.handle_event("exit_config_constraint")
+        )
+        cancel_button.pack(side=tk.RIGHT, padx=2, pady=2)
+        # confirm按钮
+        confirm_button = tk.Button(
+            label_button_frame,
+            text="Confirm",
+            command=lambda index=index: self.handle_event("confirm_config_constraint", index)
+        )
+        confirm_button.pack(side=tk.RIGHT, padx=2, pady=2)
+
+        # 显示 info
+        info_label = tk.Label(
+            row_frame,
+            width=SIDE_PANEL_WIDTH - 10,
+            anchor="w",
+            text=constraint_info)
+        info_label.pack(fill=tk.X, padx=2, pady=2)
+
+        # 显示 param
+        for key, var in constraint_params.items():
             param_frame = tk.Frame(row_frame)
             param_frame.pack(side=tk.TOP, fill=tk.X)
             # param label
-            param_label = tk.Label(param_frame, text="Parameter: ")
-            param_label.grid(row=0, column=0, padx=2, pady=2)
+            param_label = tk.Label(param_frame, text=f"{key} = ")
+            param_label.grid(row=0, column=0, pady=2)
             # param entry
-            entry_var = tk.StringVar(value="test.") # TODO
             param_entry = tk.Entry(
                 param_frame,
-                textvariable=entry_var,
-                state="readonly",
-                width=SIDE_PANEL_WIDTH - 15)
-            param_entry.grid(row=0, column=1, padx=2, pady=2)
+                textvariable=var,
+                width=20)
+            param_entry.grid(row=0, column=1, pady=2)
 
-        return
+    def _build_normal_constraint_row(self, row_frame: tk.Frame, constraint_dict: dict, index: int):
+        constraint_name = constraint_dict["name"]
+        constraint_info = constraint_dict["info"]
 
-    def _draw_constraints(self, constraints):
-        for constraint in constraints:
-            constraint.draw(self.board_canvas)
+        # 放 label 和 config / delete button
+        label_button_frame = tk.Frame(row_frame)
+        label_button_frame.pack(side=tk.TOP, fill=tk.X)
+        # Label 显示约束描述
+        name_label = tk.Label(
+            label_button_frame,
+            anchor="w",
+            text=f"C{index}: " + constraint_name)
+        name_label.pack(side=tk.LEFT, padx=2, pady=2)
+        # 删除按钮，点击后调用 handle_event 并传入对应约束的id
+        delete_button = tk.Button(
+            label_button_frame,
+            text="Del",
+            command=lambda index=index: self.handle_event("delete_constraint", index)
+        )
+        delete_button.pack(side=tk.RIGHT, padx=2, pady=2)
+        # config按钮
+        config_button = tk.Button(
+            label_button_frame,
+            text="Config",
+            command=lambda index=index: self.handle_event("enter_config_constraint", index)
+        )
+        config_button.pack(side=tk.RIGHT, padx=2, pady=2)
 
+        # 显示 info
+        info_label = tk.Label(
+            row_frame,
+            width=SIDE_PANEL_WIDTH - 10,
+            anchor="w",
+            text=constraint_info)
+        info_label.pack(fill=tk.X, padx=2, pady=2)
 
 
 

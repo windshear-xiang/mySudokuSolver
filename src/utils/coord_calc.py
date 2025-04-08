@@ -1,7 +1,7 @@
 """这个模块会读取 `config.py` 里的 `BOARD_SIDE_LENGTH`，以此为参数，根据单元格在哪个格子，计算 canvas 上的坐标
 """
 
-from src.config import BOARD_SIDE_LENGTH, SIDE_PANEL_WIDTH
+from src.ui.ui_config import BOARD_SIDE_LENGTH, SIDE_PANEL_WIDTH
 
 def calc_left_top(i: int, j: int):
     """计算单元格在 board_canvas 上的左上角坐标，注意 x,y 和 i,j 的横竖是反过来的"""

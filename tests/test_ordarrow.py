@@ -31,7 +31,7 @@ def test_cand_1():
 
     sum_pos_list = [(1,1), (1,2), (1,3)]
     prod_pos_list = [(1,4), (2,5)]
-    oac = OrdArrowConstraint(sum_pos_list, prod_pos_list)
+    oac = OrdArrowConstraint.create_constraint(sum_pos_list, prod_pos_list)
 
     s = Sudoku(puzzle, [oac])
     s.solve_true_candidates()
@@ -66,7 +66,7 @@ def test_cand_2():
 
     sum_pos_list = [(1,1), (1,2), (1,3), (1,4)]
     prod_pos_list = [(1,5)]
-    oac = OrdArrowConstraint(sum_pos_list, prod_pos_list)
+    oac = OrdArrowConstraint.create_constraint(sum_pos_list, prod_pos_list)
 
     s = Sudoku(puzzle, [oac])
     s.solve_true_candidates()
