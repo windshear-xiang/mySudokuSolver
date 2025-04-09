@@ -81,6 +81,10 @@ class SudokuController:
         self.view.bind_event("confirm_config_constraint", self.on_confirm_config_constraint)
         # 绑定键盘事件（全局绑定，编辑状态下处理数字和删除操作）
         self.view.root.bind("<Key>", self.on_key_pressed)
+        self.view.root.bind("<Control-z>", lambda _: self.on_undo())
+        self.view.root.bind("<Control-y>", lambda _: self.on_redo())
+        self.view.root.bind("<Control-s>", lambda _: self.on_save())
+        self.view.root.bind("<Control-o>", lambda _: self.on_load())
         # 自动求解勾选框，勾选的时候也会自动求解一次
         self.view.auto_solve_cb.config(variable=self.auto_solve_var, command=self._auto_start_solver)
     
@@ -274,23 +278,36 @@ class SudokuController:
             self.on_refresh_constraints()
             self._auto_start_solver()
     
-    def on_key_pressed(self, event):
-        if self.solving and not self.auto_solve_var.get():
-            self.log("求解中，不能修改棋盘")
-            return
+    def on_key_pressed(self, event: tk.Event):
+        """和棋盘有关的键盘操作，包括增删数字、移动光标等"""
         if self.selected_cell is None:
             return
-        
         i, j = self.selected_cell
+
+        # 如果按下数字键1~9，则设定该格的值，并标记为用户输入
         if len(event.char) == 1 and event.char.isdigit() and event.char != '0':
-            # 如果按下数字键1~9，则设定该格的值，并标记为用户输入
+            if self.solving and not self.auto_solve_var.get():
+                self.log("求解中，不能修改棋盘")
+                return
             digit = int(event.char)
             if self.model.set_digit(i, j, digit):
                 self._auto_start_solver()
+        # 删除数字，清空当前格（置为0）
         elif event.keysym in ("BackSpace", "Delete"):
-            # 清空当前格（置为0）
+            if self.solving and not self.auto_solve_var.get():
+                self.log("求解中，不能修改棋盘")
+                return
             if self.model.del_digit(i, j):
                 self._auto_start_solver()
+        # 方向键
+        elif event.keysym == "Up" and i > 0:
+            self.selected_cell = (i-1, j)
+        elif event.keysym == "Down" and i < 8:
+            self.selected_cell = (i+1, j)
+        elif event.keysym == "Left" and j > 0:
+            self.selected_cell = (i, j-1)
+        elif event.keysym == "Right" and j < 8:
+            self.selected_cell = (i, j+1)
     
     def _auto_start_solver(self):
         """可能需要自动求解的时候都调用它，它会自己判断目前是否是自动求解模式，以及目前是否正在求解"""

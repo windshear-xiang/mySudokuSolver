@@ -99,7 +99,7 @@ git push origin main
       + [x] confirm
     + [x] 添加 constraint 的功能
   + [ ] 加clear的功能
-  + [ ] 撤销和移动的按键绑定
+  + [x] 撤销和移动的按键绑定
   + [x] 更好的无解和冲突显示
   + [ ] 改用ttk构造更好看的界面？
   + [ ] 压缩储存，稀疏矩阵/位掩码/pickle？
