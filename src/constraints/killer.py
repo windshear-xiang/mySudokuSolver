@@ -8,6 +8,7 @@ from src.utils.coord_calc import *
 from src.ui_config import BOARD_SIDE_LENGTH
 from src.utils.tkinter_polygon import create_cutted_rectangle
 from src.utils.type_definitions import *
+from src.utils.check_conflict import numba_has_conflict
 
 class KillerConstraint(DenseMultiCellConstraint):
 
@@ -57,17 +58,10 @@ class KillerConstraint(DenseMultiCellConstraint):
     def draw(self, board_canvas: tk.Canvas, color:str="gray"):
         pad = 10
         text_size = 16
-        min_x0 = float("inf")
-        min_y0 = float("inf")
-        tupled_cell_positions = [(x, y) for x, y in self.cell_positions]
+        tupled_cell_positions = [(i, j) for i, j in self.cell_positions]
         for (i, j) in tupled_cell_positions:
             x0, y0 = calc_left_top(i, j)
             x1, y1 = calc_right_bottom(i, j)
-            # 找出最左边的格子里最靠上的，用来放sum数字
-            if x0 <= min_x0:
-                min_x0 = x0
-                if y0 <= min_y0:
-                    min_y0 = y0
             # 没有相邻的就往回缩
             cut_top, cut_bottom, cut_left, cut_right = False, False, False, False
             if (i, j+1) not in tupled_cell_positions:
@@ -86,11 +80,16 @@ class KillerConstraint(DenseMultiCellConstraint):
                                     cut_right=cut_right,
                                     pad=pad,
                                     fill=color, outline="", stipple="gray50")
+        # 找出最上边的格子里最靠左的，用来放sum数字
+        min_i, min_j = min(tupled_cell_positions)
+        min_x0, min_y0 = calc_left_top(min_i, min_j)
         board_canvas.create_text(min_x0 + text_size/2, min_y0 + text_size/2, text=str(self.killer_sum),
                                  font=('Arial', text_size), fill="red")
 
 @njit(nogil=True)
 def _numba_is_valid(board: np.ndarray, rows: np.ndarray, cols: np.ndarray, killer_sum: int) -> bool:
+    if numba_has_conflict(board):
+        return False
     sum = 0
     for i in range(len(rows)):
         val = board[rows[i], cols[i]]

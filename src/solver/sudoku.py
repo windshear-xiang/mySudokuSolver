@@ -75,6 +75,9 @@ class Sudoku:
             # Eliminate this cell
             self.tuf_board[i, j, :] = -1 
             self.tuf_board[i, j, num-1] = 1
+        for constraint in self.constraints:
+            avail_cands = constraint.available_candidates(self.puzzle_board)
+            self.tuf_board[~avail_cands] = -1
         return
 
     @property

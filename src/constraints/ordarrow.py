@@ -6,6 +6,7 @@ from src.utils.ordinal import Ordinal, digit2ord
 from src.utils.coord_calc import *
 from src.ui_config import BOARD_SIDE_LENGTH
 from src.utils.tkinter_polygon import create_approx_circle
+from src.utils.check_conflict import numba_has_conflict
 from . import DenseMultiCellConstraint
 
 class OrdArrowConstraint(DenseMultiCellConstraint):
@@ -91,6 +92,8 @@ class OrdArrowConstraint(DenseMultiCellConstraint):
 
 @njit(nogil=True)
 def _numba_is_valid(assigned_board, sum_pos_list, prod_pos_list):
+    if numba_has_conflict(assigned_board):
+        return False
     board_sum = Ordinal([0])
     board_prod = Ordinal([1])
     sum_range = len(sum_pos_list)
