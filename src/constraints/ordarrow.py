@@ -4,7 +4,7 @@ from numba import njit, prange
 import tkinter as tk
 from src.utils.ordinal import Ordinal, digit2ord
 from src.utils.coord_calc import *
-from src.ui.ui_config import BOARD_SIDE_LENGTH
+from src.ui_config import BOARD_SIDE_LENGTH
 from src.utils.tkinter_polygon import create_approx_circle
 from . import DenseMultiCellConstraint
 

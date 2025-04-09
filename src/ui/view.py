@@ -3,11 +3,12 @@
 Passive view 没有控制层调用就啥也不干，组件的回调函数也都写在控制层。
 """
 
+from itertools import cycle, repeat
 import numpy as np
 import tkinter as tk
 from src.utils.ordinal import digit2ord
 from src.ui.logger import Logger
-from src.ui.ui_config import BOARD_SIDE_LENGTH, SIDE_PANEL_WIDTH
+from src.ui_config import BOARD_SIDE_LENGTH, SIDE_PANEL_WIDTH, COLOR_LIST
 from src.utils.coord_calc import *
 from src.utils.type_definitions import *
 from src.utils.check_conflict import get_conflict_board
@@ -25,6 +26,7 @@ class SudokuView:
 
         # 视图层状态属性
         self.display_as_ord_var = tk.BooleanVar(value=False) # 序数显示模式
+        self.display_constraint_color_var = tk.BooleanVar(value=True) # 显示constraint有颜色
         self.constraint_names_list = constraint_names_list # 可用的constraint的名字的列表
         self.select_constraint_var = tk.StringVar(value=self.constraint_names_list[0]) # 新建
 
@@ -94,25 +96,33 @@ class SudokuView:
         self.control_frame = tk.Frame(self.side_frame)
         self.control_frame.pack(side=tk.TOP, padx=5, pady=5, fill=tk.X)
 
-        # 自动求解的勾选框【注意这个放在控制层了】
-        self.auto_solve_cb = tk.Checkbutton(self.control_frame, text="Auto Solve")
-        self.auto_solve_cb.grid(row=0, column=0, padx=5)
+        # 显示颜色的勾选框
+        self.display_color_cb = tk.Checkbutton(self.control_frame, text="Colorful Constraints", variable=self.display_constraint_color_var)
+        self.display_color_cb.grid(row=0, column=0, padx=5)
 
         # 序数显示的勾选框
         self.display_as_ord_cb = tk.Checkbutton(self.control_frame, text="Display as Ordinal", variable=self.display_as_ord_var)
         self.display_as_ord_cb.grid(row=0, column=1, padx=5)
 
+        # 自动求解的勾选框【注意这个放在控制层了】
+        self.auto_solve_cb = tk.Checkbutton(self.control_frame, text="Auto Solve")
+        self.auto_solve_cb.grid(row=1, column=0, padx=5, pady=5)
+
+        # 清理求解结果
+        self.clear_button = tk.Button(self.control_frame, text="Clear Results", command=lambda: self.handle_event("clear_results"))
+        self.clear_button.grid(row=1, column=1, padx=5, pady=5)
+
         # 求解的按钮
         self.solve_button = tk.Button(self.control_frame, text="Solve True Candidates", command=lambda: self.handle_event("start_solver"))
-        self.solve_button.grid(row=1, column=0, padx=5, pady=5)
+        self.solve_button.grid(row=2, column=0, padx=5, pady=5)
 
         # 强行停止求解的按钮
         self.stop_button = tk.Button(self.control_frame, text="Force Stop", command=lambda: self.handle_event("stop_solver"))
-        self.stop_button.grid(row=1, column=1, padx=5, pady=5)
+        self.stop_button.grid(row=2, column=1, padx=5, pady=5)
 
         # 在控制区下方增加一行，用于 "Save" 和 "Load" 按钮
         self.sl_frame = tk.Frame(self.control_frame)
-        self.sl_frame.grid(row=2, column=0, padx=5, pady=5)
+        self.sl_frame.grid(row=3, column=0, padx=5, pady=5)
 
         self.save_button = tk.Button(self.sl_frame, text="Save", command=lambda: self.handle_event("save"))
         self.save_button.grid(row=0, column=0, padx=5, pady=5)
@@ -122,7 +132,7 @@ class SudokuView:
 
         # 撤销和恢复
         self.unredo_frame = tk.Frame(self.control_frame)
-        self.unredo_frame.grid(row=2, column=1, padx=5, pady=5)
+        self.unredo_frame.grid(row=3, column=1, padx=5, pady=5)
 
         self.undo_button = tk.Button(self.unredo_frame, text="Undo", command=lambda: self.handle_event("undo"))
         self.undo_button.grid(row=0, column=0, padx=5, pady=5)
@@ -196,9 +206,13 @@ class SudokuView:
             self._draw_constraint_cell(i, j, index)
     
     def _draw_constraints(self, constraints, config_constraint_index: int | None):
-        for index, constraint in enumerate(constraints):
+        if self.display_constraint_color_var.get():
+            colors = cycle(COLOR_LIST)
+        else:
+            colors = repeat("gray")
+        for index, (constraint, color) in enumerate(zip(constraints, colors)):
             if index != config_constraint_index:
-                constraint.draw(self.board_canvas)
+                constraint.draw(self.board_canvas, color)
 
     def _draw_constraint_cell(self, i, j, index):
         x0, y0 = calc_left_top(i, j)
@@ -302,12 +316,13 @@ class SudokuView:
             # 计算小数字在该单元格内的位置，注意相对于该单元格的 x0, y0
             x = x0 + col * (BOARD_SIDE_LENGTH // 3) + (BOARD_SIDE_LENGTH // 6)
             y = y0 + row * (BOARD_SIDE_LENGTH // 3) + (BOARD_SIDE_LENGTH // 6)
-            if state == -1:
-                continue
+            if state == 0:
+                color = 'green' # '#cccccc'
             elif state == 1:
                 color = 'blue'
             else:
-                color = 'green' # '#cccccc'
+                # state == -1 or -2
+                continue
             if self.display_as_ord_var.get():
                 if num == 8:
                     x += 5

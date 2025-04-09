@@ -74,6 +74,7 @@ class SudokuController:
         self.view.bind_event("load", self.on_load)
         self.view.bind_event("undo", self.on_undo)
         self.view.bind_event("redo", self.on_redo)
+        self.view.bind_event("clear_results", self.on_clear_results)
         self.view.bind_event("delete_constraint", self.on_delete_constraint)
         self.view.bind_event("new_constraint", self.on_new_constraint)
         self.view.bind_event("enter_config_constraint", self.on_enter_config_constraint)
@@ -139,6 +140,7 @@ class SudokuController:
             return
 
         # 进入config模式，会禁用按键、改变click逻辑等等
+        self.log("进入 config constraint 模式")
         self.config_constraint = True
         self.config_constraint_index = index
         self.selected_cell = None
@@ -155,6 +157,7 @@ class SudokuController:
         """退出 config constraint 的模式"""
         
         # 全部恢复原样
+        self.log("退出 config constraint 模式")
         self.config_constraint = False
         self.config_constraint_index = None
         self.temp_constraint_cells = []
@@ -200,6 +203,9 @@ class SudokuController:
             self.on_refresh_constraints()
             self._auto_start_solver()
         return
+
+    def on_clear_results(self):
+        return self.model.clear_results()
 
     def on_save(self):
         if self.solving:

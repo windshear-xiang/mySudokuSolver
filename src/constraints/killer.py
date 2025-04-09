@@ -5,7 +5,7 @@ from typing import Sequence
 import tkinter as tk
 from . import DenseMultiCellConstraint
 from src.utils.coord_calc import *
-from src.ui.ui_config import BOARD_SIDE_LENGTH
+from src.ui_config import BOARD_SIDE_LENGTH
 from src.utils.tkinter_polygon import create_cutted_rectangle
 from src.utils.type_definitions import *
 

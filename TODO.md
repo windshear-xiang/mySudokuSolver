@@ -98,12 +98,13 @@ git push origin main
       + [x] cancel
       + [x] confirm
     + [x] 添加 constraint 的功能
-  + [ ] 加clear的功能
+  + [x] 加clear的功能
   + [x] 撤销和移动的按键绑定
   + [x] 更好的无解和冲突显示
   + [ ] 改用ttk构造更好看的界面？
   + [x] 压缩储存，稀疏矩阵/位掩码/pickle？
     + 只存构造所用的参数，以及用一个小东西存一下类型，就够了
+  + [ ] 彩色constraint
   + [ ] 记忆化的worker
   + [ ] 改用custom exception
   

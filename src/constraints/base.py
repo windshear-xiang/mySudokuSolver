@@ -96,6 +96,6 @@ class BaseConstraint(ABC):
             return np.zeros((9, 9, 9), dtype=bool)
     
     @abstractmethod
-    def draw(self, canvas):
+    def draw(self, canvas, color):
         """在棋盘上绘制出限制规则，用户必须自己实现"""
         pass

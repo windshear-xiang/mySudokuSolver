@@ -35,7 +35,7 @@ class SudokuModel:
         if index >= len(self.constraints):
             self.log(f"访问的 constraint C{index} 不存在")
             return []
-        return deepcopy(self.constraints[index].cells)
+        return deepcopy([(i, j) for i,j in self.constraints[index].cells])
 
     def get_constraint_params(self, index) -> None | dict:
         """返回第 index 个 constraint 的 params 的副本"""
@@ -55,6 +55,7 @@ class SudokuModel:
             return False
         else:
             self.constraints.append(new_constraint)
+            self.log(f"创建 {ConstraintClass.__name__} 成功")
             self._build_new_history()
             return True
 
@@ -71,6 +72,7 @@ class SudokuModel:
             return False
         else:
             self.constraints[index] = new_constraint
+            self.log(f"修改 constraint C{index} 成功")
             self._build_new_history()
             return True
 
@@ -177,3 +179,6 @@ class SudokuModel:
         self.log(f"已恢复到下一版本 {self.history_pointer}/{len(self.history)}")
         return True
 
+    def clear_results(self):
+        """把 curr_tuf_board 置为 -2 表示不要显示"""
+        self.curr_tuf_board.fill(-2)
