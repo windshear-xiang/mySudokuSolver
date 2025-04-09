@@ -5,6 +5,11 @@
 import numpy as np
 from src.constraints import OrdArrowConstraint, KillerConstraint
 
+CONSTRAINTS_DICT = {
+    "KillerConstraint": KillerConstraint,
+    "OrdArrowConstraint": OrdArrowConstraint
+}
+
 # CONFIG_PUZZLE_BOARD = np.array([
 #     [9, 0, 0, 0, 0, 0, 0, 0, 0],
 #     [0, 0, 0, 0, 0, 0, 0, 0, 0],

@@ -22,7 +22,7 @@ class BaseConstraint(ABC):
         用户必须自己在子类里实现：
             + `initialize()` 方法：用户自定义的初始化，`__init__()` 的参数会原样传进来
             + `info` 属性：用来打印展示的内容信息
-            + `param_names` 属性：初始化需要用到的其他参数的名称列表
+            + `param_names` 类方法：初始化需要用到的其他参数的名称列表
             + `is_valid()` 方法：检查棋盘是否满足限制规则
             + `draw()` 方法：在棋盘上绘制出限制规则
         推荐用户实现，但不是必须:
@@ -64,9 +64,9 @@ class BaseConstraint(ABC):
         """返回 constraint 所涉及的其他参数，请不要改动这个属性"""
         return self._params
     
-    @property
+    @classmethod
     @abstractmethod
-    def param_names(self) -> list[str]:
+    def param_names(cls) -> list[str]:
         """返回初始化需要用到的 param 参数的名称列表"""
         pass
     

@@ -8,6 +8,7 @@ import tkinter as tk
 from src.utils.ordinal import digit2ord
 from src.ui.logger import Logger
 from src.ui.ui_config import BOARD_SIDE_LENGTH, SIDE_PANEL_WIDTH
+from src.config import CONSTRAINTS_DICT
 from src.utils.coord_calc import *
 from src.utils.type_definitions import *
 
@@ -24,6 +25,8 @@ class SudokuView:
 
         # 视图层状态属性
         self.display_as_ord_var = tk.BooleanVar(value=False) # 序数显示模式
+        self.constraints_list = list(CONSTRAINTS_DICT.keys())
+        self.select_constraint_var = tk.StringVar(value=self.constraints_list[0]) # 新建constraint的选取
 
          # 构建棋盘及其它控件
         self._build_board()
@@ -135,13 +138,20 @@ class SudokuView:
 
         # constraints 显示框，放在日志显示框下面
         self.constraint_label_frame = tk.Frame(self.side_frame, width=SIDE_PANEL_WIDTH)
-        self.constraint_label_frame.pack(side=tk.TOP, anchor='w', padx=5, pady=(15, 0))
+        self.constraint_label_frame.pack(side=tk.TOP, anchor='w', fill=tk.X, expand=True, padx=5, pady=(15, 0))
 
         self.constraint_label = tk.Label(self.constraint_label_frame, text="Constraints")
-        self.constraint_label.grid(row=0, column=0, padx=5, pady=5)
+        self.constraint_label.pack(side=tk.LEFT, padx=2, pady=2)
 
-        self.new_constraint_button = tk.Button(self.constraint_label_frame, text="New", command=lambda: self.handle_event("new_constraint"))
-        self.new_constraint_button.grid(row=0, column=1, padx=5, pady=5)
+        self.new_constraint_button = tk.Button(
+            self.constraint_label_frame,
+            text="New",
+            command=lambda: self.handle_event("new_constraint", self.select_constraint_var.get())
+        )
+        self.new_constraint_button.pack(side=tk.RIGHT, padx=2, pady=2)
+
+        option_menu = tk.OptionMenu(self.constraint_label_frame, self.select_constraint_var, *self.constraints_list)
+        option_menu.pack(side=tk.RIGHT, padx=2, pady=2)
 
         self.constraint_container = tk.Frame(self.side_frame, width=SIDE_PANEL_WIDTH, height=18, borderwidth=1, relief="groove")
         self.constraint_container.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)

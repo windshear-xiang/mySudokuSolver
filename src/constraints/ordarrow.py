@@ -39,8 +39,8 @@ class OrdArrowConstraint(DenseMultiCellConstraint):
         pl = [f"({x},{y})" for x,y in self.prod_pos_list.tolist()]
         return f"{' * '.join(pl)} = {' + '.join(sl)}"
     
-    @property
-    def param_names(self):
+    @classmethod
+    def param_names(cls):
         return ["prod_len"]
     
     def is_valid(self, assigned_board):

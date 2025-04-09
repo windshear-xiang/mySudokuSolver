@@ -67,6 +67,7 @@ class SudokuController:
         self.view.bind_event("undo", self.on_undo)
         self.view.bind_event("redo", self.on_redo)
         self.view.bind_event("delete_constraint", self.on_delete_constraint)
+        self.view.bind_event("new_constraint", self.on_new_constraint)
         self.view.bind_event("enter_config_constraint", self.on_enter_config_constraint)
         self.view.bind_event("exit_config_constraint", self.on_exit_config_constraint)
         self.view.bind_event("confirm_config_constraint", self.on_confirm_config_constraint)
@@ -104,6 +105,13 @@ class SudokuController:
             if (i, j) in self.temp_constraint_cells:
                 self.temp_constraint_cells.remove((i, j))
         return
+
+    def on_new_constraint(self, constraint_name):
+        if self.solving:
+            self.log("求解中，不能新建限制规则")
+            return
+        
+        pass
 
     def on_enter_config_constraint(self, index):
         """进入 config constraint 的模式"""

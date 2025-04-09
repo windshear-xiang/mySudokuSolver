@@ -29,8 +29,8 @@ class KillerConstraint(DenseMultiCellConstraint):
         sl = [f"({x},{y})" for x,y in self.cell_positions.tolist()]
         return f"{' + '.join(sl)} = {self.killer_sum}"
     
-    @property
-    def param_names(self):
+    @classmethod
+    def param_names(cls):
         return ["killer_sum"]
     
     def is_valid(self, assigned_board: NumBoard) -> bool:
