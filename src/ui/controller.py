@@ -368,7 +368,7 @@ class SudokuController:
                 if out is None:
                     # 求解结束
                     self.solving = False
-                    self.log("接收到求解结束讯息")
+                    self.log("接收到结束讯息，求解已结束")
                 else:
                     self.log("接收到中间结果")
                     self.model.curr_tuf_board = out

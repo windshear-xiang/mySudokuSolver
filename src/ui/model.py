@@ -56,7 +56,6 @@ class SudokuModel:
         else:
             self.constraints.append(new_constraint)
             self.log(f"创建 {ConstraintClass.__name__} 成功")
-            self._build_new_history()
             return True
 
     def config_constraint(self, cells, params, index):

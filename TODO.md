@@ -104,7 +104,7 @@ git push origin main
   + [ ] 改用ttk构造更好看的界面？
   + [x] 压缩储存，稀疏矩阵/位掩码/pickle？
     + 只存构造所用的参数，以及用一个小东西存一下类型，就够了
-  + [ ] 彩色constraint
+  + [x] 彩色constraint
   + [ ] 记忆化的worker
   + [ ] 改用custom exception
   
