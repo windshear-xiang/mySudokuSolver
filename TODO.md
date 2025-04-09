@@ -88,7 +88,7 @@ git push origin main
   + [x] sl的编码放在model层
   + [x] 撤销的功能
   + [x] 把棋盘格子变成一整块canvas
-  + [ ] 手动设定constraints的功能
+  + [x] 手动设定constraints的功能
     + [x] 图形显示
     + [x] 删除
       + 太多bug了，还是deepcopy吧，祈祷能正常运行
@@ -97,12 +97,14 @@ git push origin main
       + [x] enter
       + [x] cancel
       + [x] confirm
-    + [ ] 添加 constraint 的功能
-  + [ ] 加clear的功能
-  + [ ] 撤销和移动的按键绑定
-  + [ ] 更好的无解和冲突显示
+    + [x] 添加 constraint 的功能
+  + [x] 加clear的功能
+  + [x] 撤销和移动的按键绑定
+  + [x] 更好的无解和冲突显示
   + [ ] 改用ttk构造更好看的界面？
-  + [ ] 压缩储存，稀疏矩阵/位掩码/pickle？
+  + [x] 压缩储存，稀疏矩阵/位掩码/pickle？
+    + 只存构造所用的参数，以及用一个小东西存一下类型，就够了
+  + [x] 彩色constraint
   + [ ] 记忆化的worker
   + [ ] 改用custom exception
   

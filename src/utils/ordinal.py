@@ -1,3 +1,6 @@
+"""Provide the class and utils on Ordinals for my ordinal-related constraints
+"""
+
 import numpy as np
 from numba import njit, int32
 from numba.experimental import jitclass

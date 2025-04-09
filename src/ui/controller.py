@@ -16,14 +16,22 @@ import time
 from src.ui.model import SudokuModel
 from src.ui.view import SudokuView
 from src.solver.sudoku import Sudoku
+from src.constraints import CONSTRAINT_CLASSES_LIST
+from src.utils.check_conflict import has_conflict
 
 REFRESH_TIME_INTERVAL = 100
 
 class SudokuController:
     def __init__(self, puzzle_board, constraints) -> None:
+
+        # 可用的 constraints 有哪些
+        self.constraints_dict = {
+            ConstraintClass.__name__: ConstraintClass
+                for ConstraintClass in CONSTRAINT_CLASSES_LIST
+        }
         
         # 视图层
-        self.view = SudokuView()
+        self.view = SudokuView(list(self.constraints_dict.keys()))
         self.raw_logger = self.view.raw_logger # 从视图层构造日志生成器
 
         # 模型层
@@ -66,14 +74,21 @@ class SudokuController:
         self.view.bind_event("load", self.on_load)
         self.view.bind_event("undo", self.on_undo)
         self.view.bind_event("redo", self.on_redo)
+        self.view.bind_event("clear_results", self.on_clear_results)
         self.view.bind_event("delete_constraint", self.on_delete_constraint)
+        self.view.bind_event("new_constraint", self.on_new_constraint)
         self.view.bind_event("enter_config_constraint", self.on_enter_config_constraint)
         self.view.bind_event("exit_config_constraint", self.on_exit_config_constraint)
         self.view.bind_event("confirm_config_constraint", self.on_confirm_config_constraint)
         # 绑定键盘事件（全局绑定，编辑状态下处理数字和删除操作）
         self.view.root.bind("<Key>", self.on_key_pressed)
+        self.view.root.bind("<Control-z>", lambda _: self.on_undo())
+        self.view.root.bind("<Control-y>", lambda _: self.on_redo())
+        self.view.root.bind("<Control-s>", lambda _: self.on_save())
+        self.view.root.bind("<Control-o>", lambda _: self.on_load())
         # 自动求解勾选框，勾选的时候也会自动求解一次
         self.view.auto_solve_cb.config(variable=self.auto_solve_var, command=self._auto_start_solver)
+        self.view.display_color_cb.config(command=self.on_refresh_constraints)
     
     def check_update(self):
         self.view.update_display(
@@ -105,11 +120,25 @@ class SudokuController:
                 self.temp_constraint_cells.remove((i, j))
         return
 
+    def on_new_constraint(self, constraint_name: str):
+        if self.solving:
+            self.log("求解中，不能新建限制规则")
+            return
+        if self.config_constraint:
+            self.log("正在修改限制规则，请先确认或取消")
+            return
+        ConstraintClass = self.constraints_dict[constraint_name]
+        self.model.add_constraint(ConstraintClass)
+        return self.on_refresh_constraints()
+
     def on_enter_config_constraint(self, index):
         """进入 config constraint 的模式"""
 
         if self.solving:
             self.log("求解中，不能修改限制规则")
+            return
+        if self.config_constraint:
+            self.log("正在修改限制规则，请先确认或取消")
             return
 
         # 这一步模型层会检查能不能找到这个constraint
@@ -118,6 +147,7 @@ class SudokuController:
             return
 
         # 进入config模式，会禁用按键、改变click逻辑等等
+        self.log("进入 config constraint 模式")
         self.config_constraint = True
         self.config_constraint_index = index
         self.selected_cell = None
@@ -134,6 +164,7 @@ class SudokuController:
         """退出 config constraint 的模式"""
         
         # 全部恢复原样
+        self.log("退出 config constraint 模式")
         self.config_constraint = False
         self.config_constraint_index = None
         self.temp_constraint_cells = []
@@ -175,10 +206,16 @@ class SudokuController:
         if self.solving:
             self.log("求解中，不能删除限制规则")
             return
+        if self.config_constraint:
+            self.log("正在修改限制规则，请先确认或取消")
+            return
         if self.model.del_constraint(index):
             self.on_refresh_constraints()
             self._auto_start_solver()
         return
+
+    def on_clear_results(self):
+        return self.model.clear_results()
 
     def on_save(self):
         if self.solving:
@@ -257,23 +294,36 @@ class SudokuController:
             self.on_refresh_constraints()
             self._auto_start_solver()
     
-    def on_key_pressed(self, event):
-        if self.solving and not self.auto_solve_var.get():
-            self.log("求解中，不能修改棋盘")
-            return
+    def on_key_pressed(self, event: tk.Event):
+        """和棋盘有关的键盘操作，包括增删数字、移动光标等"""
         if self.selected_cell is None:
             return
-        
         i, j = self.selected_cell
+
+        # 如果按下数字键1~9，则设定该格的值，并标记为用户输入
         if len(event.char) == 1 and event.char.isdigit() and event.char != '0':
-            # 如果按下数字键1~9，则设定该格的值，并标记为用户输入
+            if self.solving and not self.auto_solve_var.get():
+                self.log("求解中，不能修改棋盘")
+                return
             digit = int(event.char)
             if self.model.set_digit(i, j, digit):
                 self._auto_start_solver()
+        # 删除数字，清空当前格（置为0）
         elif event.keysym in ("BackSpace", "Delete"):
-            # 清空当前格（置为0）
+            if self.solving and not self.auto_solve_var.get():
+                self.log("求解中，不能修改棋盘")
+                return
             if self.model.del_digit(i, j):
                 self._auto_start_solver()
+        # 方向键
+        elif event.keysym == "Up" and i > 0:
+            self.selected_cell = (i-1, j)
+        elif event.keysym == "Down" and i < 8:
+            self.selected_cell = (i+1, j)
+        elif event.keysym == "Left" and j > 0:
+            self.selected_cell = (i, j-1)
+        elif event.keysym == "Right" and j < 8:
+            self.selected_cell = (i, j+1)
     
     def _auto_start_solver(self):
         """可能需要自动求解的时候都调用它，它会自己判断目前是否是自动求解模式，以及目前是否正在求解"""
@@ -295,6 +345,9 @@ class SudokuController:
             return
         if self.config_constraint:
             self.log("目前正在修改限制规则，不能求解")
+            return
+        if has_conflict(self.model.curr_puzzle_board):
+            self.log("当前数独有冲突，不能求解")
             return
         
         self.solving = True
@@ -325,7 +378,7 @@ class SudokuController:
                 if out is None:
                     # 求解结束
                     self.solving = False
-                    self.log("接收到求解结束讯息")
+                    self.log("接收到结束讯息，求解已结束")
                 else:
                     self.log("接收到中间结果")
                     self.model.curr_tuf_board = out
@@ -350,7 +403,8 @@ def worker(s: Sudoku, log):
         log("开始求解")
         s.solve_true_candidates()
     except InterruptedError:
-        log("求解已被中止")
+        sc, ct = s.get_counter_stat()
+        log(f"求解已被中止. {sc}steps {ct:.3f}s")
     except Exception as e:
         log(str(e))
     else:

@@ -4,19 +4,28 @@ from numba import njit, prange
 import tkinter as tk
 from src.utils.ordinal import Ordinal, digit2ord
 from src.utils.coord_calc import *
-from src.ui.ui_config import BOARD_SIDE_LENGTH
+from src.ui_config import BOARD_SIDE_LENGTH
 from src.utils.tkinter_polygon import create_approx_circle
+from src.utils.check_conflict import numba_has_conflict
 from . import DenseMultiCellConstraint
 
 class OrdArrowConstraint(DenseMultiCellConstraint):
 
-    @staticmethod
-    def create_constraint(sum_pos_list, prod_pos_list, prep_at_init: bool = True):
-        """用传统方法生成 Constraint 对象的工厂方法"""
-        return OrdArrowConstraint(
+    @classmethod
+    def create_constraint(cls, sum_pos_list, prod_pos_list, prep_at_init: bool = True):
+        """用传统方法生成 Constraint 对象的工厂方法，给老代码留个接口"""
+        return cls(
             prod_pos_list + sum_pos_list,
             {"prod_len": len(prod_pos_list)},
             prep_at_init
+        )
+    
+    @classmethod
+    def create_default(cls):
+        return cls(
+            cells = [(0, 0), (0, 1)],
+            params = {"prod_len": 1},
+            prep_at_init = False
         )
 
     def initialize(self, cells, params, prep_at_init: bool = True):
@@ -38,10 +47,6 @@ class OrdArrowConstraint(DenseMultiCellConstraint):
         sl = [f"({x},{y})" for x,y in self.sum_pos_list.tolist()]
         pl = [f"({x},{y})" for x,y in self.prod_pos_list.tolist()]
         return f"{' * '.join(pl)} = {' + '.join(sl)}"
-    
-    @property
-    def param_names(self):
-        return ["prod_len"]
     
     def is_valid(self, assigned_board):
         return _numba_is_valid(assigned_board, self.sum_pos_list, self.prod_pos_list)
@@ -87,6 +92,8 @@ class OrdArrowConstraint(DenseMultiCellConstraint):
 
 @njit(nogil=True)
 def _numba_is_valid(assigned_board, sum_pos_list, prod_pos_list):
+    if numba_has_conflict(assigned_board):
+        return False
     board_sum = Ordinal([0])
     board_prod = Ordinal([1])
     sum_range = len(sum_pos_list)

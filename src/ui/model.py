@@ -35,7 +35,7 @@ class SudokuModel:
         if index >= len(self.constraints):
             self.log(f"访问的 constraint C{index} 不存在")
             return []
-        return deepcopy(self.constraints[index].cells)
+        return deepcopy([(i, j) for i,j in self.constraints[index].cells])
 
     def get_constraint_params(self, index) -> None | dict:
         """返回第 index 个 constraint 的 params 的副本"""
@@ -44,6 +44,21 @@ class SudokuModel:
             return None
         return deepcopy(self.constraints[index].params)
     
+    def add_constraint(self, ConstraintClass: type):
+        """创建一个 ConstraintClass 类型的默认约束规则，加在列表最后"""
+        try:
+            if not issubclass(ConstraintClass, Constraint):
+                raise TypeError(f"{ConstraintClass.__name__} 不是合法的 constraint 类型")
+            new_constraint = ConstraintClass.create_default()
+        except Exception as e:
+            self.log(f"创建 {ConstraintClass.__name__} 失败: {str(e)}")
+            return False
+        else:
+            self.constraints.append(new_constraint)
+            self.log(f"创建 {ConstraintClass.__name__} 成功")
+            self._build_new_history()
+            return True
+
     def config_constraint(self, cells, params, index):
         """用参数 cells, params 重新生成 constraint 替换 index 位置的"""
         if index >= len(self.constraints):
@@ -57,6 +72,7 @@ class SudokuModel:
             return False
         else:
             self.constraints[index] = new_constraint
+            self.log(f"修改 constraint C{index} 成功")
             self._build_new_history()
             return True
 
@@ -105,7 +121,14 @@ class SudokuModel:
         obj = {
             "curr_puzzle_board": self.curr_puzzle_board,
             "curr_tuf_board": self.curr_tuf_board,
-            "constraints": self.constraints
+            "constraints": [
+                {
+                    "default_obj": constraint.__class__.create_default(), # 创建一个默认对象，用来记住这个类
+                    "cells": constraint.cells,
+                    "params": constraint.params
+                }
+                for constraint in self.constraints
+            ]
         }
         with open(file_path, 'w', encoding='utf-8') as file:
             json.dump(obj, file, indent=None)
@@ -116,7 +139,14 @@ class SudokuModel:
             obj = json.load(file)
         self.curr_puzzle_board = obj["curr_puzzle_board"]
         self.curr_tuf_board = obj["curr_tuf_board"]
-        self.constraints = obj["constraints"]
+        self.constraints = [
+            recover_dict["default_obj"].__class__(
+                cells = recover_dict["cells"],
+                params = recover_dict["params"],
+                prep_at_init = False
+            )
+            for recover_dict in obj["constraints"]
+        ]
         # 这是可以撤回的操作
         self._build_new_history()
         return
@@ -149,3 +179,6 @@ class SudokuModel:
         self.log(f"已恢复到下一版本 {self.history_pointer}/{len(self.history)}")
         return True
 
+    def clear_results(self):
+        """把 curr_tuf_board 置为 -2 表示不要显示"""
+        self.curr_tuf_board.fill(-2)

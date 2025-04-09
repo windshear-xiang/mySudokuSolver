@@ -3,18 +3,21 @@
 Passive view 没有控制层调用就啥也不干，组件的回调函数也都写在控制层。
 """
 
+from itertools import cycle, repeat
 import numpy as np
 import tkinter as tk
 from src.utils.ordinal import digit2ord
 from src.ui.logger import Logger
-from src.ui.ui_config import BOARD_SIDE_LENGTH, SIDE_PANEL_WIDTH
+from src.ui_config import BOARD_SIDE_LENGTH, SIDE_PANEL_WIDTH, COLOR_LIST
 from src.utils.coord_calc import *
 from src.utils.type_definitions import *
+from src.utils.check_conflict import get_conflict_board
+from src.utils.scrollable_frame import ScrollableFrame
 
 DIGIT_TO_ORD_STR = {n: str(digit2ord(n)) for n in range(1, 10)}
 
 class SudokuView:
-    def __init__(self) -> None:
+    def __init__(self, constraint_names_list: list[str]) -> None:
         self.root = tk.Tk()
         self.root.title("Sudoku Solver")
 
@@ -24,6 +27,9 @@ class SudokuView:
 
         # 视图层状态属性
         self.display_as_ord_var = tk.BooleanVar(value=False) # 序数显示模式
+        self.display_constraint_color_var = tk.BooleanVar(value=True) # 显示constraint有颜色
+        self.constraint_names_list = constraint_names_list # 可用的constraint的名字的列表
+        self.select_constraint_var = tk.StringVar(value=self.constraint_names_list[0]) # 新建
 
          # 构建棋盘及其它控件
         self._build_board()
@@ -57,9 +63,9 @@ class SudokuView:
     
     def _build_board(self):
         """创建单一 Canvas 用于绘制整个数独棋盘"""
-        board_size = 9 * BOARD_SIDE_LENGTH  # 例如 9 * 90 = 810
+        board_size = 9 * BOARD_SIDE_LENGTH 
         self.board_canvas = tk.Canvas(self.root, width=board_size, height=board_size, bg="white", highlightthickness=0)
-        # 将棋盘 Canvas 放在主界面左侧（例如：grid(row=0, column=0)）
+        # 将棋盘 Canvas 放在主界面左侧
         self.board_canvas.grid(row=0, column=0, padx=0, pady=0)
         self.board_canvas.bind("<Button-1>", self._on_left_board_click)
         self.board_canvas.bind("<Button-3>", self._on_right_board_click)
@@ -91,25 +97,33 @@ class SudokuView:
         self.control_frame = tk.Frame(self.side_frame)
         self.control_frame.pack(side=tk.TOP, padx=5, pady=5, fill=tk.X)
 
-        # 自动求解的勾选框【注意这个放在控制层了】
-        self.auto_solve_cb = tk.Checkbutton(self.control_frame, text="Auto Solve")
-        self.auto_solve_cb.grid(row=0, column=0, padx=5)
+        # 显示颜色的勾选框
+        self.display_color_cb = tk.Checkbutton(self.control_frame, text="Colorful Constraints", variable=self.display_constraint_color_var)
+        self.display_color_cb.grid(row=0, column=0, padx=5)
 
         # 序数显示的勾选框
         self.display_as_ord_cb = tk.Checkbutton(self.control_frame, text="Display as Ordinal", variable=self.display_as_ord_var)
         self.display_as_ord_cb.grid(row=0, column=1, padx=5)
 
+        # 自动求解的勾选框【注意这个放在控制层了】
+        self.auto_solve_cb = tk.Checkbutton(self.control_frame, text="Auto Solve")
+        self.auto_solve_cb.grid(row=1, column=0, padx=5, pady=5)
+
+        # 清理求解结果
+        self.clear_button = tk.Button(self.control_frame, text="Clear Results", command=lambda: self.handle_event("clear_results"))
+        self.clear_button.grid(row=1, column=1, padx=5, pady=5)
+
         # 求解的按钮
         self.solve_button = tk.Button(self.control_frame, text="Solve True Candidates", command=lambda: self.handle_event("start_solver"))
-        self.solve_button.grid(row=1, column=0, padx=5, pady=5)
+        self.solve_button.grid(row=2, column=0, padx=5, pady=5)
 
         # 强行停止求解的按钮
         self.stop_button = tk.Button(self.control_frame, text="Force Stop", command=lambda: self.handle_event("stop_solver"))
-        self.stop_button.grid(row=1, column=1, padx=5, pady=5)
+        self.stop_button.grid(row=2, column=1, padx=5, pady=5)
 
         # 在控制区下方增加一行，用于 "Save" 和 "Load" 按钮
         self.sl_frame = tk.Frame(self.control_frame)
-        self.sl_frame.grid(row=2, column=0, padx=5, pady=5)
+        self.sl_frame.grid(row=3, column=0, padx=5, pady=5)
 
         self.save_button = tk.Button(self.sl_frame, text="Save", command=lambda: self.handle_event("save"))
         self.save_button.grid(row=0, column=0, padx=5, pady=5)
@@ -119,7 +133,7 @@ class SudokuView:
 
         # 撤销和恢复
         self.unredo_frame = tk.Frame(self.control_frame)
-        self.unredo_frame.grid(row=2, column=1, padx=5, pady=5)
+        self.unredo_frame.grid(row=3, column=1, padx=5, pady=5)
 
         self.undo_button = tk.Button(self.unredo_frame, text="Undo", command=lambda: self.handle_event("undo"))
         self.undo_button.grid(row=0, column=0, padx=5, pady=5)
@@ -135,15 +149,26 @@ class SudokuView:
 
         # constraints 显示框，放在日志显示框下面
         self.constraint_label_frame = tk.Frame(self.side_frame, width=SIDE_PANEL_WIDTH)
-        self.constraint_label_frame.pack(side=tk.TOP, anchor='w', padx=5, pady=(15, 0))
+        self.constraint_label_frame.pack(side=tk.TOP, anchor='w', fill=tk.X, expand=True, padx=5, pady=(15, 0))
 
         self.constraint_label = tk.Label(self.constraint_label_frame, text="Constraints")
-        self.constraint_label.grid(row=0, column=0, padx=5, pady=5)
+        self.constraint_label.pack(side=tk.LEFT, padx=2, pady=2)
 
-        self.new_constraint_button = tk.Button(self.constraint_label_frame, text="New", command=lambda: self.handle_event("new_constraint"))
-        self.new_constraint_button.grid(row=0, column=1, padx=5, pady=5)
+        self.new_constraint_button = tk.Button(
+            self.constraint_label_frame,
+            text="New",
+            command=lambda: self.handle_event("new_constraint", self.select_constraint_var.get())
+        )
+        self.new_constraint_button.pack(side=tk.RIGHT, padx=2, pady=2)
 
-        self.constraint_container = tk.Frame(self.side_frame, width=SIDE_PANEL_WIDTH, height=18, borderwidth=1, relief="groove")
+        option_menu = tk.OptionMenu(
+            self.constraint_label_frame,
+            self.select_constraint_var,
+            *self.constraint_names_list
+        )
+        option_menu.pack(side=tk.RIGHT, padx=2, pady=2)
+
+        self.constraint_container = ScrollableFrame(self.side_frame, width=SIDE_PANEL_WIDTH, height=18)
         self.constraint_container.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
     
     def update_display(self,
@@ -169,15 +194,26 @@ class SudokuView:
         # 绘制单元格内容
         for i in range(9):
             for j in range(9):
-                self._draw_cell_content(i, j, curr_puzzle_board, curr_tuf_board, selected_cell)
+                self._draw_cell_content(
+                    i,
+                    j,
+                    curr_puzzle_board,
+                    get_conflict_board(curr_puzzle_board),
+                    curr_tuf_board,
+                    selected_cell
+                )
         # 绘制 constraint cells 内容
         for index, (i, j) in enumerate(constraint_cells):
             self._draw_constraint_cell(i, j, index)
     
     def _draw_constraints(self, constraints, config_constraint_index: int | None):
-        for index, constraint in enumerate(constraints):
+        if self.display_constraint_color_var.get():
+            colors = cycle(COLOR_LIST)
+        else:
+            colors = repeat("gray")
+        for index, (constraint, color) in enumerate(zip(constraints, colors)):
             if index != config_constraint_index:
-                constraint.draw(self.board_canvas)
+                constraint.draw(self.board_canvas, color)
 
     def _draw_constraint_cell(self, i, j, index):
         x0, y0 = calc_left_top(i, j)
@@ -190,7 +226,7 @@ class SudokuView:
             center_x, center_y, text=str(index), font=('Arial', 60), fill='white'
         )
 
-    def _draw_cell_content(self, i: int, j: int, curr_puzzle_board, curr_tuf_board, selected_cell):
+    def _draw_cell_content(self, i: int, j: int, curr_puzzle_board, curr_conflict_board, curr_tuf_board, selected_cell):
         """绘制单元格内容"""
         # 计算单元格在 board_canvas 上的坐标
         x0, y0 = calc_left_top(i, j)
@@ -198,7 +234,12 @@ class SudokuView:
 
         if curr_puzzle_board[i, j] != 0:
             # 已经 assigned 的格子：画黑色大数字
-            self._draw_assigned_number(center_x, center_y, curr_puzzle_board[i, j])
+            self._draw_assigned_number(
+                center_x,
+                center_y,
+                curr_puzzle_board[i, j],
+                curr_conflict_board[i, j]
+            )
         else:
             cell_data = curr_tuf_board[i, j]
             true_cand_count = np.sum(cell_data == 1)
@@ -239,11 +280,17 @@ class SudokuView:
         y1 = y0 + BOARD_SIDE_LENGTH
         self.board_canvas.create_rectangle(x0 + 2, y0 + 2, x1 - 2, y1 - 2, outline="red", width=3)
     
-    def _draw_assigned_number(self, center_x: int, center_y: int, number: int):
-        if self.display_as_ord_var.get():
-            self.board_canvas.create_text(center_x, center_y, text=DIGIT_TO_ORD_STR[number], font=('Arial', 26), fill='black')
+    def _draw_assigned_number(self, center_x: int, center_y: int, number: int, conflct: bool):
+        # 如果有冲突，就画成红色
+        if conflct == True:
+            color = "red"
         else:
-            self.board_canvas.create_text(center_x, center_y, text=str(number), font=('Arial', 40), fill='black')
+            color = "black"
+        # 根据是否是序数显示模式绘制成数字或者序数
+        if self.display_as_ord_var.get():
+            self.board_canvas.create_text(center_x, center_y, text=DIGIT_TO_ORD_STR[number], font=('Arial', 26), fill=color)
+        else:
+            self.board_canvas.create_text(center_x, center_y, text=str(number), font=('Arial', 40), fill=color)
     
     def _draw_big_number(self, center_x: int, center_y: int, number: int):
         if self.display_as_ord_var.get():
@@ -254,8 +301,13 @@ class SudokuView:
     def _draw_small_grid(self, x0: int, y0: int, cell_data: np.ndarray):
         # 无解情况
         if np.all(cell_data == -1):
-            self.board_canvas.create_text(x0 + BOARD_SIDE_LENGTH // 2, y0 + BOARD_SIDE_LENGTH // 2,
-                                          text='X', font=('Arial', BOARD_SIDE_LENGTH // 2), fill='red')
+            self.board_canvas.create_text(
+                x0 + BOARD_SIDE_LENGTH // 2,
+                y0 + BOARD_SIDE_LENGTH // 2,
+                text='X',
+                font=('Arial', BOARD_SIDE_LENGTH // 2),
+                fill='red'
+            )
             return
         for num in range(1, 10):
             idx = num - 1
@@ -265,13 +317,13 @@ class SudokuView:
             # 计算小数字在该单元格内的位置，注意相对于该单元格的 x0, y0
             x = x0 + col * (BOARD_SIDE_LENGTH // 3) + (BOARD_SIDE_LENGTH // 6)
             y = y0 + row * (BOARD_SIDE_LENGTH // 3) + (BOARD_SIDE_LENGTH // 6)
-            if state == -1:
-                color = 'white'
-                continue
+            if state == 0:
+                color = 'green' # '#cccccc'
             elif state == 1:
                 color = 'blue'
             else:
-                color = 'green' # '#cccccc'
+                # state == -1 or -2
+                continue
             if self.display_as_ord_var.get():
                 if num == 8:
                     x += 5
@@ -288,27 +340,34 @@ class SudokuView:
             config_constraint_index: int | None
         ):
         # 先清空原有内容
-        for old_widget in self.constraint_container.winfo_children():
+        for old_widget in self.constraint_container.inner_frame.winfo_children():
             old_widget.destroy()
 
         if len(constraint_dicts) == 0:
-            empty_label = tk.Label(self.constraint_container, text="None.")
+            empty_label = tk.Label(self.constraint_container.inner_frame, text="None.")
             empty_label.pack(fill=tk.X, padx=2, pady=2)
             return
 
-        for index, c_dict in enumerate(constraint_dicts):
+        if self.display_constraint_color_var.get():
+            colors = cycle(COLOR_LIST)
+        else:
+            colors = repeat(None)
+        
+        for index, (c_dict, color) in enumerate(zip(constraint_dicts, colors)):
             # 为每个约束创建一个子 Frame，其内包含约束描述、参数输入框、修改和删除按钮
-            row_frame = tk.Frame(self.constraint_container, borderwidth=1, relief="sunken")
+            row_frame = tk.Frame(self.constraint_container.inner_frame, borderwidth=1, relief="sunken")
             row_frame.pack(fill=tk.X, padx=2, pady=2)
 
             if index == config_constraint_index:
-                self._build_config_constraint_row(row_frame, c_dict, index)
+                self._build_config_constraint_row(
+                    row_frame, c_dict, index, color)
             else:
-                self._build_normal_constraint_row(row_frame, c_dict, index)
+                self._build_normal_constraint_row(
+                    row_frame, c_dict, index, color)
     
         return
     
-    def _build_config_constraint_row(self, row_frame: tk.Frame, constraint_dict: dict, index: int):
+    def _build_config_constraint_row(self, row_frame: tk.Frame, constraint_dict: dict, index: int, color):
 
         constraint_name = constraint_dict["name"]
         constraint_info = "Configuring..."
@@ -321,20 +380,22 @@ class SudokuView:
         name_label = tk.Label(
             label_button_frame,
             anchor="w",
-            text=f"C{index}: " + constraint_name)
+            bg=color,
+            text=f"C{index}: " + constraint_name
+        )
         name_label.pack(side=tk.LEFT, padx=2, pady=2)
         # 取消按钮，退出config状态
         cancel_button = tk.Button(
             label_button_frame,
             text="Cancel",
-            command=lambda index=index: self.handle_event("exit_config_constraint")
+            command=lambda: self.handle_event("exit_config_constraint")
         )
         cancel_button.pack(side=tk.RIGHT, padx=2, pady=2)
         # confirm按钮
         confirm_button = tk.Button(
             label_button_frame,
             text="Confirm",
-            command=lambda index=index: self.handle_event("confirm_config_constraint")
+            command=lambda: self.handle_event("confirm_config_constraint")
         )
         confirm_button.pack(side=tk.RIGHT, padx=2, pady=2)
 
@@ -360,7 +421,7 @@ class SudokuView:
                 width=20)
             param_entry.grid(row=0, column=1, pady=2)
 
-    def _build_normal_constraint_row(self, row_frame: tk.Frame, constraint_dict: dict, index: int):
+    def _build_normal_constraint_row(self, row_frame: tk.Frame, constraint_dict: dict, index: int, color):
         constraint_name = constraint_dict["name"]
         constraint_info = constraint_dict["info"]
 
@@ -371,7 +432,9 @@ class SudokuView:
         name_label = tk.Label(
             label_button_frame,
             anchor="w",
-            text=f"C{index}: " + constraint_name)
+            bg=color,
+            text=f"C{index}: " + constraint_name
+        )
         name_label.pack(side=tk.LEFT, padx=2, pady=2)
         # 删除按钮，点击后调用 handle_event 并传入对应约束的id
         delete_button = tk.Button(
@@ -396,56 +459,3 @@ class SudokuView:
             wraplength=300,
             text=constraint_info)
         info_label.pack(fill=tk.X, padx=2, pady=2)
-
-
-
-    # def on_add_constraint_clicked(self):
-    #     """
-    #     当点击添加约束按钮时，由 Controller 提供当前可用的约束列表，
-    #     这里为了示例直接使用一个假定的列表，后续 Controller 可调用 view.show_add_constraint_dialog(available_list, callback)
-    #     """
-    #     available_constraints = ["ConstraintA", "ConstraintB", "ConstraintC"]
-    #     # 此处传入的 callback 函数将在用户点击确认后被调用
-    #     self.show_add_constraint_dialog(available_constraints, self.handle_new_constraint)
-    
-    # def show_add_constraint_dialog(self, available_constraints: list, callback):
-    #     """
-    #     弹出一个对话框供用户选择约束类型和输入参数。
-        
-    #     参数:
-    #       available_constraints: 一个约束名称列表，填充在下拉选框中。
-    #       callback: 当用户点击确认时调用此方法，传入用户选择的约束类型和参数。
-    #     """
-    #     dialog = tk.Toplevel(self.root)
-    #     dialog.title("Add Constraint")
-    #     dialog.grab_set()  # 模态对话框，使用户在关闭对话框前无法点击主窗口
-
-    #     # 约束类型的下拉选框
-    #     tk.Label(dialog, text="Constraint Type:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
-    #     constraint_type = tk.StringVar(value=available_constraints[0])
-    #     option_menu = tk.OptionMenu(dialog, constraint_type, *available_constraints)
-    #     option_menu.grid(row=0, column=1, padx=5, pady=5, sticky="w")
-        
-    #     # 参数的文本输入框
-    #     tk.Label(dialog, text="Parameters:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
-    #     param_entry = tk.Entry(dialog, width=30)
-    #     param_entry.grid(row=1, column=1, padx=5, pady=5, sticky="w")
-        
-    #     # 确认按钮
-    #     def on_confirm():
-    #         sel_type = constraint_type.get()
-    #         params = param_entry.get().strip()
-    #         # 调用传入的回调函数，将选中的约束类型和参数传递出去
-    #         callback(sel_type, params)
-    #         dialog.destroy()  # 关闭对话框
-        
-    #     confirm_button = tk.Button(dialog, text="Confirm", command=on_confirm)
-    #     confirm_button.grid(row=2, column=0, columnspan=2, padx=5, pady=10)
-    
-    # def handle_new_constraint(self, constraint_type: str, params: str):
-    #     """
-    #     这个方法作为回调函数，在用户确认添加约束后被调用。
-    #     你可以在这里调用 Controller 提供的事件接口，传递用户选择的 constraint_type 和 params。
-    #     """
-    #     self.handle_event("add_constraint", constraint_type, params)
-    #     print(f"Add constraint: {constraint_type} with params: {params}")
