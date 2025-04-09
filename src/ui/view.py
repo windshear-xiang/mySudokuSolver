@@ -12,6 +12,7 @@ from src.ui_config import BOARD_SIDE_LENGTH, SIDE_PANEL_WIDTH, COLOR_LIST
 from src.utils.coord_calc import *
 from src.utils.type_definitions import *
 from src.utils.check_conflict import get_conflict_board
+from src.utils.scrollable_frame import ScrollableFrame
 
 DIGIT_TO_ORD_STR = {n: str(digit2ord(n)) for n in range(1, 10)}
 
@@ -167,7 +168,7 @@ class SudokuView:
         )
         option_menu.pack(side=tk.RIGHT, padx=2, pady=2)
 
-        self.constraint_container = tk.Frame(self.side_frame, width=SIDE_PANEL_WIDTH, height=18, borderwidth=1, relief="groove")
+        self.constraint_container = ScrollableFrame(self.side_frame, width=SIDE_PANEL_WIDTH, height=18)
         self.constraint_container.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
     
     def update_display(self,
@@ -339,27 +340,34 @@ class SudokuView:
             config_constraint_index: int | None
         ):
         # 先清空原有内容
-        for old_widget in self.constraint_container.winfo_children():
+        for old_widget in self.constraint_container.inner_frame.winfo_children():
             old_widget.destroy()
 
         if len(constraint_dicts) == 0:
-            empty_label = tk.Label(self.constraint_container, text="None.")
+            empty_label = tk.Label(self.constraint_container.inner_frame, text="None.")
             empty_label.pack(fill=tk.X, padx=2, pady=2)
             return
 
-        for index, c_dict in enumerate(constraint_dicts):
+        if self.display_constraint_color_var.get():
+            colors = cycle(COLOR_LIST)
+        else:
+            colors = repeat(None)
+        
+        for index, (c_dict, color) in enumerate(zip(constraint_dicts, colors)):
             # 为每个约束创建一个子 Frame，其内包含约束描述、参数输入框、修改和删除按钮
-            row_frame = tk.Frame(self.constraint_container, borderwidth=1, relief="sunken")
+            row_frame = tk.Frame(self.constraint_container.inner_frame, borderwidth=1, relief="sunken")
             row_frame.pack(fill=tk.X, padx=2, pady=2)
 
             if index == config_constraint_index:
-                self._build_config_constraint_row(row_frame, c_dict, index)
+                self._build_config_constraint_row(
+                    row_frame, c_dict, index, color)
             else:
-                self._build_normal_constraint_row(row_frame, c_dict, index)
+                self._build_normal_constraint_row(
+                    row_frame, c_dict, index, color)
     
         return
     
-    def _build_config_constraint_row(self, row_frame: tk.Frame, constraint_dict: dict, index: int):
+    def _build_config_constraint_row(self, row_frame: tk.Frame, constraint_dict: dict, index: int, color):
 
         constraint_name = constraint_dict["name"]
         constraint_info = "Configuring..."
@@ -372,20 +380,22 @@ class SudokuView:
         name_label = tk.Label(
             label_button_frame,
             anchor="w",
-            text=f"C{index}: " + constraint_name)
+            bg=color,
+            text=f"C{index}: " + constraint_name
+        )
         name_label.pack(side=tk.LEFT, padx=2, pady=2)
         # 取消按钮，退出config状态
         cancel_button = tk.Button(
             label_button_frame,
             text="Cancel",
-            command=lambda index=index: self.handle_event("exit_config_constraint")
+            command=lambda: self.handle_event("exit_config_constraint")
         )
         cancel_button.pack(side=tk.RIGHT, padx=2, pady=2)
         # confirm按钮
         confirm_button = tk.Button(
             label_button_frame,
             text="Confirm",
-            command=lambda index=index: self.handle_event("confirm_config_constraint")
+            command=lambda: self.handle_event("confirm_config_constraint")
         )
         confirm_button.pack(side=tk.RIGHT, padx=2, pady=2)
 
@@ -411,7 +421,7 @@ class SudokuView:
                 width=20)
             param_entry.grid(row=0, column=1, pady=2)
 
-    def _build_normal_constraint_row(self, row_frame: tk.Frame, constraint_dict: dict, index: int):
+    def _build_normal_constraint_row(self, row_frame: tk.Frame, constraint_dict: dict, index: int, color):
         constraint_name = constraint_dict["name"]
         constraint_info = constraint_dict["info"]
 
@@ -422,7 +432,9 @@ class SudokuView:
         name_label = tk.Label(
             label_button_frame,
             anchor="w",
-            text=f"C{index}: " + constraint_name)
+            bg=color,
+            text=f"C{index}: " + constraint_name
+        )
         name_label.pack(side=tk.LEFT, padx=2, pady=2)
         # 删除按钮，点击后调用 handle_event 并传入对应约束的id
         delete_button = tk.Button(
@@ -447,56 +459,3 @@ class SudokuView:
             wraplength=300,
             text=constraint_info)
         info_label.pack(fill=tk.X, padx=2, pady=2)
-
-
-
-    # def on_add_constraint_clicked(self):
-    #     """
-    #     当点击添加约束按钮时，由 Controller 提供当前可用的约束列表，
-    #     这里为了示例直接使用一个假定的列表，后续 Controller 可调用 view.show_add_constraint_dialog(available_list, callback)
-    #     """
-    #     available_constraints = ["ConstraintA", "ConstraintB", "ConstraintC"]
-    #     # 此处传入的 callback 函数将在用户点击确认后被调用
-    #     self.show_add_constraint_dialog(available_constraints, self.handle_new_constraint)
-    
-    # def show_add_constraint_dialog(self, available_constraints: list, callback):
-    #     """
-    #     弹出一个对话框供用户选择约束类型和输入参数。
-        
-    #     参数:
-    #       available_constraints: 一个约束名称列表，填充在下拉选框中。
-    #       callback: 当用户点击确认时调用此方法，传入用户选择的约束类型和参数。
-    #     """
-    #     dialog = tk.Toplevel(self.root)
-    #     dialog.title("Add Constraint")
-    #     dialog.grab_set()  # 模态对话框，使用户在关闭对话框前无法点击主窗口
-
-    #     # 约束类型的下拉选框
-    #     tk.Label(dialog, text="Constraint Type:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
-    #     constraint_type = tk.StringVar(value=available_constraints[0])
-    #     option_menu = tk.OptionMenu(dialog, constraint_type, *available_constraints)
-    #     option_menu.grid(row=0, column=1, padx=5, pady=5, sticky="w")
-        
-    #     # 参数的文本输入框
-    #     tk.Label(dialog, text="Parameters:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
-    #     param_entry = tk.Entry(dialog, width=30)
-    #     param_entry.grid(row=1, column=1, padx=5, pady=5, sticky="w")
-        
-    #     # 确认按钮
-    #     def on_confirm():
-    #         sel_type = constraint_type.get()
-    #         params = param_entry.get().strip()
-    #         # 调用传入的回调函数，将选中的约束类型和参数传递出去
-    #         callback(sel_type, params)
-    #         dialog.destroy()  # 关闭对话框
-        
-    #     confirm_button = tk.Button(dialog, text="Confirm", command=on_confirm)
-    #     confirm_button.grid(row=2, column=0, columnspan=2, padx=5, pady=10)
-    
-    # def handle_new_constraint(self, constraint_type: str, params: str):
-    #     """
-    #     这个方法作为回调函数，在用户确认添加约束后被调用。
-    #     你可以在这里调用 Controller 提供的事件接口，传递用户选择的 constraint_type 和 params。
-    #     """
-    #     self.handle_event("add_constraint", constraint_type, params)
-    #     print(f"Add constraint: {constraint_type} with params: {params}")

@@ -88,6 +88,7 @@ class SudokuController:
         self.view.root.bind("<Control-o>", lambda _: self.on_load())
         # 自动求解勾选框，勾选的时候也会自动求解一次
         self.view.auto_solve_cb.config(variable=self.auto_solve_var, command=self._auto_start_solver)
+        self.view.display_color_cb.config(command=self.on_refresh_constraints)
     
     def check_update(self):
         self.view.update_display(
@@ -123,6 +124,9 @@ class SudokuController:
         if self.solving:
             self.log("求解中，不能新建限制规则")
             return
+        if self.config_constraint:
+            self.log("正在修改限制规则，请先确认或取消")
+            return
         ConstraintClass = self.constraints_dict[constraint_name]
         self.model.add_constraint(ConstraintClass)
         return self.on_refresh_constraints()
@@ -132,6 +136,9 @@ class SudokuController:
 
         if self.solving:
             self.log("求解中，不能修改限制规则")
+            return
+        if self.config_constraint:
+            self.log("正在修改限制规则，请先确认或取消")
             return
 
         # 这一步模型层会检查能不能找到这个constraint
@@ -198,6 +205,9 @@ class SudokuController:
     def on_delete_constraint(self, index):
         if self.solving:
             self.log("求解中，不能删除限制规则")
+            return
+        if self.config_constraint:
+            self.log("正在修改限制规则，请先确认或取消")
             return
         if self.model.del_constraint(index):
             self.on_refresh_constraints()
@@ -393,7 +403,8 @@ def worker(s: Sudoku, log):
         log("开始求解")
         s.solve_true_candidates()
     except InterruptedError:
-        log("求解已被中止")
+        sc, ct = s.get_counter_stat()
+        log(f"求解已被中止. {sc}steps {ct:.3f}s")
     except Exception as e:
         log(str(e))
     else:
