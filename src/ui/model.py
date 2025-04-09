@@ -49,7 +49,7 @@ class SudokuModel:
         try:
             if not issubclass(ConstraintClass, Constraint):
                 raise TypeError(f"{ConstraintClass.__name__} 不是合法的 constraint 类型")
-            new_constraint = ConstraintClass.create_constraint()
+            new_constraint = ConstraintClass.create_default()
         except Exception as e:
             self.log(f"创建 {ConstraintClass.__name__} 失败: {str(e)}")
             return False
@@ -119,7 +119,14 @@ class SudokuModel:
         obj = {
             "curr_puzzle_board": self.curr_puzzle_board,
             "curr_tuf_board": self.curr_tuf_board,
-            "constraints": self.constraints
+            "constraints": [
+                {
+                    "default_obj": constraint.__class__.create_default(), # 创建一个默认对象，用来记住这个类
+                    "cells": constraint.cells,
+                    "params": constraint.params
+                }
+                for constraint in self.constraints
+            ]
         }
         with open(file_path, 'w', encoding='utf-8') as file:
             json.dump(obj, file, indent=None)
@@ -130,7 +137,14 @@ class SudokuModel:
             obj = json.load(file)
         self.curr_puzzle_board = obj["curr_puzzle_board"]
         self.curr_tuf_board = obj["curr_tuf_board"]
-        self.constraints = obj["constraints"]
+        self.constraints = [
+            recover_dict["default_obj"].__class__(
+                cells = recover_dict["cells"],
+                params = recover_dict["params"],
+                prep_at_init = False
+            )
+            for recover_dict in obj["constraints"]
+        ]
         # 这是可以撤回的操作
         self._build_new_history()
         return

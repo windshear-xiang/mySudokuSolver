@@ -11,11 +11,20 @@ from . import DenseMultiCellConstraint
 class OrdArrowConstraint(DenseMultiCellConstraint):
 
     @classmethod
-    def create_constraint(cls, sum_pos_list=[(0,1)], prod_pos_list=[(0,0)], prep_at_init: bool = True):
+    def create_constraint(cls, sum_pos_list, prod_pos_list, prep_at_init: bool = True):
+        """用传统方法生成 Constraint 对象的工厂方法，给老代码留个接口"""
         return cls(
             prod_pos_list + sum_pos_list,
             {"prod_len": len(prod_pos_list)},
             prep_at_init
+        )
+    
+    @classmethod
+    def create_default(cls):
+        return cls(
+            cells = [(0, 0), (0, 1)],
+            params = {"prod_len": 1},
+            prep_at_init = False
         )
 
     def initialize(self, cells, params, prep_at_init: bool = True):

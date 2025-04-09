@@ -12,11 +12,20 @@ from src.utils.type_definitions import *
 class KillerConstraint(DenseMultiCellConstraint):
 
     @classmethod
-    def create_constraint(cls, cells=[(0,0)], killer_sum=0, prep_at_init: bool = True):
+    def create_constraint(cls, cells, killer_sum, prep_at_init: bool = True):
+        """用传统方法生成 Constraint 对象的工厂方法，给老代码留个接口"""
         return cls(
             cells,
             {"killer_sum": killer_sum},
             prep_at_init
+        )
+    
+    @classmethod
+    def create_default(cls):
+        return cls(
+            cells = [(0, 0)],
+            params = {"killer_sum": 0},
+            prep_at_init = False
         )
 
     def initialize(self, cells, params, prep_at_init: bool = True):

@@ -12,6 +12,7 @@ class BaseConstraint(ABC):
     Attributes:
         _cells (list[Position]): 所涉及的格子坐标
         _params (dict[str, Any]): 所涉及的其他参数
+        prep_at_init (bool): 是否在创建时预处理，默认`True`
 
     Notes:
         用户请不要改动:
@@ -21,7 +22,7 @@ class BaseConstraint(ABC):
             + `params` 属性：返回所涉及的其他参数
         用户必须自己在子类里实现：
             + `initialize()` 方法：用户自定义的初始化，`__init__()` 的参数会原样传进来
-            + `create_constraint()` 类方法：工厂方法，可以不提供参数生成默认的实例
+            + `create_default()` 类方法：工厂方法，可以不提供参数生成默认的实例
             + `info` 属性：用来打印展示的内容信息
             + `is_valid()` 方法：检查棋盘是否满足限制规则
             + `draw()` 方法：在棋盘上绘制出限制规则
@@ -29,7 +30,7 @@ class BaseConstraint(ABC):
             + `available_candidates()` 方法
     """
 
-    def __init__(self, cells: list, params: dict[str, Any], *args, **kwargs) -> None:
+    def __init__(self, cells: list, params: dict[str, Any], prep_at_init: bool = True, *args, **kwargs) -> None:
         """请不要改动这个方法
         
         必须传入 `cells: list[Position]` 和 `params :dict[str, Any]` 作为前两个参数
@@ -38,7 +39,7 @@ class BaseConstraint(ABC):
         """
         self._cells = cells
         self._params = params
-        self.initialize(cells, params, *args, **kwargs)
+        self.initialize(cells, params, prep_at_init, *args, **kwargs)
     
     @abstractmethod
     def initialize(self, cells: list, params: dict[str, Any], *args, **kwargs) -> None:
@@ -50,10 +51,8 @@ class BaseConstraint(ABC):
 
     @classmethod
     @abstractmethod
-    def create_constraint(cls) -> Self:
-        """用传统方法生成 Constraint 对象的工厂方法
-        
-        这个方法也实现了，在不提供任何参数的情况下，生成一个默认的 constraint 的功能
+    def create_default(cls) -> Self:
+        """实现在不提供任何参数的情况下，生成一个默认的 constraint 的功能
         """
         pass
 

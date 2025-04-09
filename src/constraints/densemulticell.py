@@ -22,7 +22,7 @@ class DenseMultiCellConstraint(BaseConstraint):
             + `cells` 属性：返回 constraint 所涉及的格子坐标
             + `params` 属性：返回 constraint 所涉及的其他参数
         用户必须自己在子类里实现：
-            + `create_constraint()` 类方法：工厂方法，可以不提供参数生成默认的实例
+            + `create_default()` 类方法：工厂方法，可以不提供参数生成默认的实例
             + `info` 属性：用来打印展示的内容信息
             + `is_valid()` 方法：检查棋盘是否满足限制规则
             + `draw()` 方法：在棋盘上绘制出限制规则
@@ -31,9 +31,6 @@ class DenseMultiCellConstraint(BaseConstraint):
               **用户需要自己检查输入的参数有没有问题**\n
               **记得调用 `super.initialize()` !!!**
     '''
-
-    def __init__(self, cells: list, params: dict[str, Any], prep_at_init: bool = True, *args, **kwargs):
-        super().__init__(cells, params, prep_at_init=prep_at_init, *args, **kwargs)
 
     def initialize(self, cells, params, prep_at_init: bool = True, *args, **kwargs):
         """子类记得调用一下我！"""
