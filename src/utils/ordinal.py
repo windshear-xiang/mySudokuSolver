@@ -47,6 +47,22 @@ class Ordinal:
                 return False
         return True
 
+    def __lt__(self, other):
+        if not isinstance(other, Ordinal):
+            raise NotImplementedError
+        if self.order == other.order:
+            for i in range(self.order-1, -1, -1):
+                if self.array[i] < other.array[i]:
+                    return True
+            return False
+        else:
+            return self.order < other.order
+
+    def __le__(self, other):
+        if not isinstance(other, Ordinal):
+            raise NotImplementedError
+        return self == other or self < other
+
     def __str__(self):
         '''Construct the ordinal notation as a string'''
         if self == Ordinal([0]):
@@ -109,4 +125,4 @@ def print_board_in_ord(board):
     return
 
 # 导入模块时强行预编译
-_ = digit2ord(6) + Ordinal(np.array([0,2])) * Ordinal(np.array([0,1,2]))
+_ = digit2ord(9) > digit2ord(6) + Ordinal(np.array([0,2])) * Ordinal(np.array([0,1,2])) >= digit2ord(1)
