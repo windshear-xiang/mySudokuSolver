@@ -209,7 +209,9 @@ class Sudoku:
         qsucc = init_sol.quickdrops()
         if not qsucc:
             #说明根本就无解
-            raise Exception(f"Sudoku puzzle has no solution.")
+            self.tuf_board.fill(-1)
+            return
+        # 记录 quickdrop 结果
         mask = init_sol.assigned_board != 0 # 注意需要排除为0的格子
         self.tuf_board[X_INDICES[mask], Y_INDICES[mask], init_sol.assigned_board[mask] - 1] = 1
 
@@ -232,8 +234,11 @@ class Sudoku:
                             continue
                 # candidate is bad
                 self.tuf_board[i,j,u_cand] = -1
-            self.flush_tuf_count()
-            u_count, pos = self.get_least_unknown_cand_pos()
+            
+            if np.all(self.tuf_board[i, j] == -1):
+                # 一个格子无解，说明整体无解
+                self.tuf_board.fill(-1)
+                return
 
             # 多线程控制 输出中间结果
             if time.perf_counter() - self.output_timer > OUTPUT_TIME_INTERVAL:
@@ -243,6 +248,10 @@ class Sudoku:
                     # 让出GIL控制权给UI线程，避免卡死
                     time.sleep(OUTPUT_TIME_INTERVAL / 20)
                     self.output_timer = time.perf_counter()
+            
+            # 进入下一轮循环
+            self.flush_tuf_count()
+            u_count, pos = self.get_least_unknown_cand_pos()
                 
         return
     

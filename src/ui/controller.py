@@ -17,6 +17,7 @@ from src.ui.model import SudokuModel
 from src.ui.view import SudokuView
 from src.solver.sudoku import Sudoku
 from src.constraints import CONSTRAINT_CLASSES_LIST
+from src.utils.check_conflict import has_conflict
 
 REFRESH_TIME_INTERVAL = 100
 
@@ -311,6 +312,9 @@ class SudokuController:
             return
         if self.config_constraint:
             self.log("目前正在修改限制规则，不能求解")
+            return
+        if has_conflict(self.model.curr_puzzle_board):
+            self.log("当前数独有冲突，不能求解")
             return
         
         self.solving = True

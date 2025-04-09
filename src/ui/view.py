@@ -10,6 +10,7 @@ from src.ui.logger import Logger
 from src.ui.ui_config import BOARD_SIDE_LENGTH, SIDE_PANEL_WIDTH
 from src.utils.coord_calc import *
 from src.utils.type_definitions import *
+from src.utils.check_conflict import get_conflict_board
 
 DIGIT_TO_ORD_STR = {n: str(digit2ord(n)) for n in range(1, 10)}
 
@@ -59,9 +60,9 @@ class SudokuView:
     
     def _build_board(self):
         """创建单一 Canvas 用于绘制整个数独棋盘"""
-        board_size = 9 * BOARD_SIDE_LENGTH  # 例如 9 * 90 = 810
+        board_size = 9 * BOARD_SIDE_LENGTH 
         self.board_canvas = tk.Canvas(self.root, width=board_size, height=board_size, bg="white", highlightthickness=0)
-        # 将棋盘 Canvas 放在主界面左侧（例如：grid(row=0, column=0)）
+        # 将棋盘 Canvas 放在主界面左侧
         self.board_canvas.grid(row=0, column=0, padx=0, pady=0)
         self.board_canvas.bind("<Button-1>", self._on_left_board_click)
         self.board_canvas.bind("<Button-3>", self._on_right_board_click)
@@ -182,7 +183,14 @@ class SudokuView:
         # 绘制单元格内容
         for i in range(9):
             for j in range(9):
-                self._draw_cell_content(i, j, curr_puzzle_board, curr_tuf_board, selected_cell)
+                self._draw_cell_content(
+                    i,
+                    j,
+                    curr_puzzle_board,
+                    get_conflict_board(curr_puzzle_board),
+                    curr_tuf_board,
+                    selected_cell
+                )
         # 绘制 constraint cells 内容
         for index, (i, j) in enumerate(constraint_cells):
             self._draw_constraint_cell(i, j, index)
@@ -203,7 +211,7 @@ class SudokuView:
             center_x, center_y, text=str(index), font=('Arial', 60), fill='white'
         )
 
-    def _draw_cell_content(self, i: int, j: int, curr_puzzle_board, curr_tuf_board, selected_cell):
+    def _draw_cell_content(self, i: int, j: int, curr_puzzle_board, curr_conflict_board, curr_tuf_board, selected_cell):
         """绘制单元格内容"""
         # 计算单元格在 board_canvas 上的坐标
         x0, y0 = calc_left_top(i, j)
@@ -211,7 +219,12 @@ class SudokuView:
 
         if curr_puzzle_board[i, j] != 0:
             # 已经 assigned 的格子：画黑色大数字
-            self._draw_assigned_number(center_x, center_y, curr_puzzle_board[i, j])
+            self._draw_assigned_number(
+                center_x,
+                center_y,
+                curr_puzzle_board[i, j],
+                curr_conflict_board[i, j]
+            )
         else:
             cell_data = curr_tuf_board[i, j]
             true_cand_count = np.sum(cell_data == 1)
@@ -252,11 +265,17 @@ class SudokuView:
         y1 = y0 + BOARD_SIDE_LENGTH
         self.board_canvas.create_rectangle(x0 + 2, y0 + 2, x1 - 2, y1 - 2, outline="red", width=3)
     
-    def _draw_assigned_number(self, center_x: int, center_y: int, number: int):
-        if self.display_as_ord_var.get():
-            self.board_canvas.create_text(center_x, center_y, text=DIGIT_TO_ORD_STR[number], font=('Arial', 26), fill='black')
+    def _draw_assigned_number(self, center_x: int, center_y: int, number: int, conflct: bool):
+        # 如果有冲突，就画成红色
+        if conflct == True:
+            color = "red"
         else:
-            self.board_canvas.create_text(center_x, center_y, text=str(number), font=('Arial', 40), fill='black')
+            color = "black"
+        # 根据是否是序数显示模式绘制成数字或者序数
+        if self.display_as_ord_var.get():
+            self.board_canvas.create_text(center_x, center_y, text=DIGIT_TO_ORD_STR[number], font=('Arial', 26), fill=color)
+        else:
+            self.board_canvas.create_text(center_x, center_y, text=str(number), font=('Arial', 40), fill=color)
     
     def _draw_big_number(self, center_x: int, center_y: int, number: int):
         if self.display_as_ord_var.get():
@@ -267,8 +286,13 @@ class SudokuView:
     def _draw_small_grid(self, x0: int, y0: int, cell_data: np.ndarray):
         # 无解情况
         if np.all(cell_data == -1):
-            self.board_canvas.create_text(x0 + BOARD_SIDE_LENGTH // 2, y0 + BOARD_SIDE_LENGTH // 2,
-                                          text='X', font=('Arial', BOARD_SIDE_LENGTH // 2), fill='red')
+            self.board_canvas.create_text(
+                x0 + BOARD_SIDE_LENGTH // 2,
+                y0 + BOARD_SIDE_LENGTH // 2,
+                text='X',
+                font=('Arial', BOARD_SIDE_LENGTH // 2),
+                fill='red'
+            )
             return
         for num in range(1, 10):
             idx = num - 1
@@ -279,7 +303,6 @@ class SudokuView:
             x = x0 + col * (BOARD_SIDE_LENGTH // 3) + (BOARD_SIDE_LENGTH // 6)
             y = y0 + row * (BOARD_SIDE_LENGTH // 3) + (BOARD_SIDE_LENGTH // 6)
             if state == -1:
-                color = 'white'
                 continue
             elif state == 1:
                 color = 'blue'
