@@ -104,7 +104,7 @@ def _numba_is_valid(assigned_board, sum_pos_list, prod_pos_list):
         else:
             board_prod = board_prod * digit2ord(assigned_board[x][y])
     return board_sum == board_prod
-    
+
 @njit(nogil=True, parallel=True)
 def _numba_preprocess(valid_combinations: np.ndarray, cell_nums, rows, cols, sum_pos_list, prod_pos_list):
     combo_count = 0
@@ -126,3 +126,6 @@ def _numba_preprocess(valid_combinations: np.ndarray, cell_nums, rows, cols, sum
             combo_count += 1
     
     return combo_count
+
+# 导入模块时强行预编译
+_ = OrdArrowConstraint.create_constraint([[0,0]], [[1,1]])
