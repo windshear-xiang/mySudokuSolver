@@ -97,9 +97,7 @@ git push origin main
       + [x] enter
       + [x] cancel
       + [x] confirm
-    + [ ] 添加 constraint 的功能
-      + [ ] 需要改一下config功能，改一下代码结构
-      + [ ] 把model层再封装封装，只能接口调用，model自己知道有些constraint是假的
+    + [x] 添加 constraint 的功能
   + [ ] 加clear的功能
   + [ ] 撤销和移动的按键绑定
   + [ ] 更好的无解和冲突显示

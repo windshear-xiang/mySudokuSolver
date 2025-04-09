@@ -16,14 +16,21 @@ import time
 from src.ui.model import SudokuModel
 from src.ui.view import SudokuView
 from src.solver.sudoku import Sudoku
+from src.constraints import CONSTRAINT_CLASSES_LIST
 
 REFRESH_TIME_INTERVAL = 100
 
 class SudokuController:
     def __init__(self, puzzle_board, constraints) -> None:
+
+        # 可用的 constraints 有哪些
+        self.constraints_dict = {
+            ConstraintClass.__name__: ConstraintClass
+                for ConstraintClass in CONSTRAINT_CLASSES_LIST
+        }
         
         # 视图层
-        self.view = SudokuView()
+        self.view = SudokuView(list(self.constraints_dict.keys()))
         self.raw_logger = self.view.raw_logger # 从视图层构造日志生成器
 
         # 模型层
@@ -106,12 +113,13 @@ class SudokuController:
                 self.temp_constraint_cells.remove((i, j))
         return
 
-    def on_new_constraint(self, constraint_name):
+    def on_new_constraint(self, constraint_name: str):
         if self.solving:
             self.log("求解中，不能新建限制规则")
             return
-        
-        pass
+        ConstraintClass = self.constraints_dict[constraint_name]
+        self.model.add_constraint(ConstraintClass)
+        return self.on_refresh_constraints()
 
     def on_enter_config_constraint(self, index):
         """进入 config constraint 的模式"""

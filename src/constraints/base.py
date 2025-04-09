@@ -2,7 +2,7 @@
 """
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Self
 import numpy as np
 from src.utils.type_definitions import *
 
@@ -21,8 +21,8 @@ class BaseConstraint(ABC):
             + `params` 属性：返回所涉及的其他参数
         用户必须自己在子类里实现：
             + `initialize()` 方法：用户自定义的初始化，`__init__()` 的参数会原样传进来
+            + `create_constraint()` 类方法：工厂方法，可以不提供参数生成默认的实例
             + `info` 属性：用来打印展示的内容信息
-            + `param_names` 类方法：初始化需要用到的其他参数的名称列表
             + `is_valid()` 方法：检查棋盘是否满足限制规则
             + `draw()` 方法：在棋盘上绘制出限制规则
         推荐用户实现，但不是必须:
@@ -48,6 +48,15 @@ class BaseConstraint(ABC):
         """
         pass
 
+    @classmethod
+    @abstractmethod
+    def create_constraint(cls) -> Self:
+        """用传统方法生成 Constraint 对象的工厂方法
+        
+        这个方法也实现了，在不提供任何参数的情况下，生成一个默认的 constraint 的功能
+        """
+        pass
+
     @property
     @abstractmethod
     def info(self) -> str:
@@ -63,12 +72,6 @@ class BaseConstraint(ABC):
     def params(self) -> dict[str, Any]:
         """返回 constraint 所涉及的其他参数，请不要改动这个属性"""
         return self._params
-    
-    @classmethod
-    @abstractmethod
-    def param_names(cls) -> list[str]:
-        """返回初始化需要用到的 param 参数的名称列表"""
-        pass
     
     @abstractmethod
     def is_valid(self, assigned_board: NumBoard) -> bool:

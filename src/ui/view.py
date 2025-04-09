@@ -8,14 +8,13 @@ import tkinter as tk
 from src.utils.ordinal import digit2ord
 from src.ui.logger import Logger
 from src.ui.ui_config import BOARD_SIDE_LENGTH, SIDE_PANEL_WIDTH
-from src.config import CONSTRAINTS_DICT
 from src.utils.coord_calc import *
 from src.utils.type_definitions import *
 
 DIGIT_TO_ORD_STR = {n: str(digit2ord(n)) for n in range(1, 10)}
 
 class SudokuView:
-    def __init__(self) -> None:
+    def __init__(self, constraint_names_list: list[str]) -> None:
         self.root = tk.Tk()
         self.root.title("Sudoku Solver")
 
@@ -25,8 +24,8 @@ class SudokuView:
 
         # 视图层状态属性
         self.display_as_ord_var = tk.BooleanVar(value=False) # 序数显示模式
-        self.constraints_list = list(CONSTRAINTS_DICT.keys())
-        self.select_constraint_var = tk.StringVar(value=self.constraints_list[0]) # 新建constraint的选取
+        self.constraint_names_list = constraint_names_list # 可用的constraint的名字的列表
+        self.select_constraint_var = tk.StringVar(value=self.constraint_names_list[0]) # 新建
 
          # 构建棋盘及其它控件
         self._build_board()
@@ -150,7 +149,11 @@ class SudokuView:
         )
         self.new_constraint_button.pack(side=tk.RIGHT, padx=2, pady=2)
 
-        option_menu = tk.OptionMenu(self.constraint_label_frame, self.select_constraint_var, *self.constraints_list)
+        option_menu = tk.OptionMenu(
+            self.constraint_label_frame,
+            self.select_constraint_var,
+            *self.constraint_names_list
+        )
         option_menu.pack(side=tk.RIGHT, padx=2, pady=2)
 
         self.constraint_container = tk.Frame(self.side_frame, width=SIDE_PANEL_WIDTH, height=18, borderwidth=1, relief="groove")

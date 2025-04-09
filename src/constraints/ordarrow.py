@@ -10,10 +10,9 @@ from . import DenseMultiCellConstraint
 
 class OrdArrowConstraint(DenseMultiCellConstraint):
 
-    @staticmethod
-    def create_constraint(sum_pos_list, prod_pos_list, prep_at_init: bool = True):
-        """用传统方法生成 Constraint 对象的工厂方法"""
-        return OrdArrowConstraint(
+    @classmethod
+    def create_constraint(cls, sum_pos_list=[(0,1)], prod_pos_list=[(0,0)], prep_at_init: bool = True):
+        return cls(
             prod_pos_list + sum_pos_list,
             {"prod_len": len(prod_pos_list)},
             prep_at_init
@@ -38,10 +37,6 @@ class OrdArrowConstraint(DenseMultiCellConstraint):
         sl = [f"({x},{y})" for x,y in self.sum_pos_list.tolist()]
         pl = [f"({x},{y})" for x,y in self.prod_pos_list.tolist()]
         return f"{' * '.join(pl)} = {' + '.join(sl)}"
-    
-    @classmethod
-    def param_names(cls):
-        return ["prod_len"]
     
     def is_valid(self, assigned_board):
         return _numba_is_valid(assigned_board, self.sum_pos_list, self.prod_pos_list)

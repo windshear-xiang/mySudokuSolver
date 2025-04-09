@@ -11,10 +11,9 @@ from src.utils.type_definitions import *
 
 class KillerConstraint(DenseMultiCellConstraint):
 
-    @staticmethod
-    def create_constraint(cells, killer_sum, prep_at_init: bool = True):
-        """用传统方法生成 Constraint 对象的工厂方法"""
-        return KillerConstraint(
+    @classmethod
+    def create_constraint(cls, cells=[(0,0)], killer_sum=0, prep_at_init: bool = True):
+        return cls(
             cells,
             {"killer_sum": killer_sum},
             prep_at_init
@@ -28,10 +27,6 @@ class KillerConstraint(DenseMultiCellConstraint):
     def info(self) -> str:
         sl = [f"({x},{y})" for x,y in self.cell_positions.tolist()]
         return f"{' + '.join(sl)} = {self.killer_sum}"
-    
-    @classmethod
-    def param_names(cls):
-        return ["killer_sum"]
     
     def is_valid(self, assigned_board: NumBoard) -> bool:
         return _numba_is_valid(assigned_board, self.rows, self.cols, self.killer_sum)
@@ -82,7 +77,7 @@ class KillerConstraint(DenseMultiCellConstraint):
                                     cut_right=cut_right,
                                     pad=pad,
                                     fill=color, outline="", stipple="gray50")
-        board_canvas.create_text(min_x0 + pad/2, min_y0 + pad/2, text=str(self.killer_sum),
+        board_canvas.create_text(min_x0 + text_size/2, min_y0 + text_size/2, text=str(self.killer_sum),
                                  font=('Arial', text_size), fill="red")
 
 @njit(nogil=True)

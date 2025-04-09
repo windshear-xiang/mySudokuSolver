@@ -44,6 +44,20 @@ class SudokuModel:
             return None
         return deepcopy(self.constraints[index].params)
     
+    def add_constraint(self, ConstraintClass: type):
+        """创建一个 ConstraintClass 类型的约束规则，加在列表最后"""
+        try:
+            if not issubclass(ConstraintClass, Constraint):
+                raise TypeError(f"{ConstraintClass.__name__} 不是合法的 constraint 类型")
+            new_constraint = ConstraintClass.create_constraint()
+        except Exception as e:
+            self.log(f"创建 {ConstraintClass.__name__} 失败: {str(e)}")
+            return False
+        else:
+            self.constraints.append(new_constraint)
+            self._build_new_history()
+            return True
+
     def config_constraint(self, cells, params, index):
         """用参数 cells, params 重新生成 constraint 替换 index 位置的"""
         if index >= len(self.constraints):

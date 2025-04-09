@@ -22,8 +22,8 @@ class DenseMultiCellConstraint(BaseConstraint):
             + `cells` 属性：返回 constraint 所涉及的格子坐标
             + `params` 属性：返回 constraint 所涉及的其他参数
         用户必须自己在子类里实现：
+            + `create_constraint()` 类方法：工厂方法，可以不提供参数生成默认的实例
             + `info` 属性：用来打印展示的内容信息
-            + `param_names` 属性：初始化需要用到的其他参数的名称列表
             + `is_valid()` 方法：检查棋盘是否满足限制规则
             + `draw()` 方法：在棋盘上绘制出限制规则
         推荐用户实现，但不是必须:
