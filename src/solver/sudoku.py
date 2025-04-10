@@ -251,6 +251,7 @@ class Sudoku:
                     # 让出GIL控制权给UI线程，避免卡死
                     time.sleep(OUTPUT_TIME_INTERVAL / 20)
                     self.output_timer = time.perf_counter()
+
             
             # 进入下一轮循环
             self.flush_tuf_count()

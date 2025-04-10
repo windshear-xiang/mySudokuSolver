@@ -364,7 +364,6 @@ class SudokuView:
             else:
                 self._build_normal_constraint_row(
                     row_frame, c_dict, index, color)
-    
         return
     
     def _build_config_constraint_row(self, row_frame: tk.Frame, constraint_dict: dict, index: int, color):

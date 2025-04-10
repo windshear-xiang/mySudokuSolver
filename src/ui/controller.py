@@ -16,13 +16,14 @@ import time
 from src.ui.model import SudokuModel
 from src.ui.view import SudokuView
 from src.solver.sudoku import Sudoku
-from src.constraints import CONSTRAINT_CLASSES_LIST
+from src.constraints import CONSTRAINT_CLASSES_LIST, Constraint
 from src.utils.check_conflict import has_conflict
+from src.utils.type_definitions import *
 
 REFRESH_TIME_INTERVAL = 100
 
 class SudokuController:
-    def __init__(self, puzzle_board, constraints) -> None:
+    def __init__(self, puzzle_board: NumBoard, constraints: list[Constraint]) -> None:
 
         # 可用的 constraints 有哪些
         self.constraints_dict = {
@@ -47,6 +48,7 @@ class SudokuController:
 
         # 控制层状态属性 - 限制规则相关
         self.config_constraint: bool = False # 正在设置限制规则
+        self.adding_new_constraint: bool = False # 正在创建新规则，会影响取消时的行为
         self.config_constraint_index: int | None = None # 在设置的限制规则的编号
         # 这俩不用的时候记得清零
         self.temp_constraint_cells: list = []
@@ -128,8 +130,17 @@ class SudokuController:
             self.log("正在修改限制规则，请先确认或取消")
             return
         ConstraintClass = self.constraints_dict[constraint_name]
-        self.model.add_constraint(ConstraintClass)
-        return self.on_refresh_constraints()
+        succ = self.model.add_constraint(ConstraintClass)
+        if succ:
+            self.adding_new_constraint = True
+            # 立刻进入编辑模式，编辑刚刚创建的那个，也就是最后一个
+            self.on_enter_config_constraint(len(self.model.constraints) - 1)
+            # 把之前默认的cells全清空
+            self.temp_constraint_cells = []
+            # 刷新，确保内容渲染完成，然后触发滚动
+            self.on_refresh_constraints()
+            self.view.constraint_container.update_idletasks()  
+            self.view.constraint_container.scroll_to_bottom()
 
     def on_enter_config_constraint(self, index):
         """进入 config constraint 的模式"""
@@ -162,6 +173,11 @@ class SudokuController:
 
     def on_exit_config_constraint(self):
         """退出 config constraint 的模式"""
+
+        # 如果正在添加新规则，没有确认过就退出了，说明取消了添加，应该删掉
+        if self.adding_new_constraint:
+            self.model.del_constraint(self.config_constraint_index, record_history=False)
+            self.adding_new_constraint = False
         
         # 全部恢复原样
         self.log("退出 config constraint 模式")
@@ -181,6 +197,7 @@ class SudokuController:
             self.config_constraint_index
         )
         if succ:
+            self.adding_new_constraint = False
             self.on_exit_config_constraint()
             self._auto_start_solver()
         return
@@ -403,6 +420,7 @@ def worker(s: Sudoku, log):
         log("开始求解")
         s.solve_true_candidates()
     except InterruptedError:
+        s.out_q.put(s.tuf_board.copy())
         sc, ct = s.get_counter_stat()
         log(f"求解已被中止. {sc}steps {ct:.3f}s")
     except Exception as e:

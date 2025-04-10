@@ -16,8 +16,8 @@ class SudokuModel:
                  ) -> None:
 
         # 当前显示的棋盘
-        self.curr_puzzle_board = puzzle_board
-        self.curr_tuf_board = np.zeros((9, 9, 9), dtype=np.int8)
+        self.curr_puzzle_board: NumBoard = puzzle_board
+        self.curr_tuf_board: TufBoard = np.zeros((9, 9, 9), dtype=np.int8)
 
         # Constraints
         self.constraints = constraints
@@ -56,7 +56,7 @@ class SudokuModel:
         else:
             self.constraints.append(new_constraint)
             self.log(f"创建 {ConstraintClass.__name__} 成功")
-            self._build_new_history()
+            # self._build_new_history()
             return True
 
     def config_constraint(self, cells, params, index):
@@ -76,17 +76,18 @@ class SudokuModel:
             self._build_new_history()
             return True
 
-    def del_constraint(self, index):
+    def del_constraint(self, index, record_history = True):
         """返回是否真的删掉了"""
         if index >= len(self.constraints):
             self.log(f"要删除的 constraint C{index} 不存在")
             return False
         self.log(f"已删除 C{index} {self.constraints[index].info}")
         self.constraints.pop(index)
-        self._build_new_history()
+        if record_history:
+            self._build_new_history()
         return True
 
-    def set_digit(self, i, j, digit):
+    def set_digit(self, i, j, digit: int):
         """返回是否真的有修改"""
         assert digit != 0
         if self.curr_puzzle_board[i, j] != digit:
@@ -137,7 +138,7 @@ class SudokuModel:
     def load_from_file(self, file_path):        
         with open(file_path, 'r', encoding='utf-8') as file:
             obj = json.load(file)
-        self.curr_puzzle_board = obj["curr_puzzle_board"]
+        self.curr_puzzle_board = obj["curr_puzzle_board"].astype(dtype=np.int8)
         self.curr_tuf_board = obj["curr_tuf_board"]
         self.constraints = [
             recover_dict["default_obj"].__class__(
@@ -154,7 +155,7 @@ class SudokuModel:
     def _build_new_history(self):
         self.log(f"记录新的历史版本 {self.history_pointer + 1}")
         del self.history[self.history_pointer : ]
-        self.history.append((deepcopy(self.curr_puzzle_board), deepcopy(self.constraints))) #要构造新列表
+        self.history.append((deepcopy(self.curr_puzzle_board.astype(dtype=np.int8)), deepcopy(self.constraints))) #要构造新列表
         self.history_pointer += 1
 
     def to_prev_history(self):
@@ -163,7 +164,8 @@ class SudokuModel:
             self.log("无法撤回，已经是最早版本")
             return False
         self.history_pointer -= 1
-        self.curr_puzzle_board, self.constraints = self.history[self.history_pointer - 1]
+        self.curr_puzzle_board = self.history[self.history_pointer - 1][0].astype(dtype=np.int8)
+        self.constraints = self.history[self.history_pointer - 1][1]
         self.curr_tuf_board = np.zeros((9, 9, 9), dtype=np.int8)
         self.log(f"已撤回到上一版本 {self.history_pointer}/{len(self.history)}")
         return True
@@ -174,7 +176,8 @@ class SudokuModel:
             self.log("无法恢复，已经是最新版本")
             return False
         self.history_pointer += 1
-        self.curr_puzzle_board, self.constraints = self.history[self.history_pointer - 1]
+        self.curr_puzzle_board = self.history[self.history_pointer - 1][0].astype(dtype=np.int8)
+        self.constraints = self.history[self.history_pointer - 1][1]
         self.curr_tuf_board = np.zeros((9, 9, 9), dtype=np.int8)
         self.log(f"已恢复到下一版本 {self.history_pointer}/{len(self.history)}")
         return True
