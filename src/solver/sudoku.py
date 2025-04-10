@@ -196,8 +196,8 @@ class Sudoku:
             reset_counter (bool): 是否重置计时器
         """
 
-        # 重置多线程输出计时器
-        self.output_timer = time.perf_counter()
+        # 多线程输出计时器设为0，这样开始一定输出一次
+        self.output_timer = 0
         # 默认重置求解计时器
         if reset_counter:
             self.reset_counter()
@@ -223,7 +223,18 @@ class Sudoku:
             i,j = pos
             u_cand_ls = np.flatnonzero(self.tuf_board[i,j] == 0) # range 0-8
             for u_cand in u_cand_ls:
+
+                # 多线程控制 输出中间结果
                 self.flush_tuf_count()
+                if time.perf_counter() - self.output_timer > OUTPUT_TIME_INTERVAL:
+                    if self.out_q is not None:
+                        # 到轮次了，输出
+                        self.out_q.put(self.tuf_board.copy())
+                        # 让出GIL控制权给UI线程，避免卡死
+                        time.sleep(OUTPUT_TIME_INTERVAL / 20)
+                        self.output_timer = time.perf_counter()
+
+                # 求解循环
                 try_sol = copy.deepcopy(init_sol)
                 try_sol.candidates_board &= self.tu_board
                 succ = try_sol.settle(pos, u_cand+1)
@@ -242,15 +253,6 @@ class Sudoku:
                 # 一个格子无解，说明整体无解
                 self.tuf_board.fill(-1)
                 return
-
-            # 多线程控制 输出中间结果
-            if time.perf_counter() - self.output_timer > OUTPUT_TIME_INTERVAL:
-                if self.out_q is not None:
-                    # 到轮次了，输出
-                    self.out_q.put(self.tuf_board.copy())
-                    # 让出GIL控制权给UI线程，避免卡死
-                    time.sleep(OUTPUT_TIME_INTERVAL / 20)
-                    self.output_timer = time.perf_counter()
             
             # 进入下一轮循环
             self.flush_tuf_count()

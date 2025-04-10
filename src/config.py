@@ -25,24 +25,29 @@ from src.constraints import OrdArrowConstraint, KillerConstraint
 
 
 
-CONFIG_PUZZLE_BOARD = np.array([
-    [9, 4, 0, 0, 0, 0, 0, 0, 8],
-    [0, 0, 0, 0, 0, 0, 5, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 2, 0, 0, 1, 0, 0, 0, 3],
-    [0, 1, 0, 0, 0, 0, 0, 6, 0],
-    [0, 0, 0, 4, 0, 0, 0, 7, 0],
-    [7, 0, 8, 6, 0, 0, 0, 0, 0],
-    [2, 0, 0, 0, 3, 0, 0, 0, 1],
-    [4, 0, 0, 0, 0, 0, 2, 0, 0]
-])
+# CONFIG_PUZZLE_BOARD = np.array([
+#     [9, 4, 0, 0, 0, 0, 0, 0, 8],
+#     [0, 0, 0, 0, 0, 0, 5, 0, 0],
+#     [0, 0, 0, 0, 0, 0, 0, 0, 0],
+#     [0, 2, 0, 0, 1, 0, 0, 0, 3],
+#     [0, 1, 0, 0, 0, 0, 0, 6, 0],
+#     [0, 0, 0, 4, 0, 0, 0, 7, 0],
+#     [7, 0, 8, 6, 0, 0, 0, 0, 0],
+#     [2, 0, 0, 0, 3, 0, 0, 0, 1],
+#     [4, 0, 0, 0, 0, 0, 2, 0, 0]
+# ])
 
-pos_list_1 = [(1,1), (1,2), (1,3), (2,3), (2,4), (2,5)]
-killer_sum_1 = 26
-kc1 = KillerConstraint.create_constraint(pos_list_1, killer_sum_1, prep_at_init=False)
+# pos_list_1 = [(1,1), (1,2), (1,3), (2,3), (2,4), (2,5)]
+# killer_sum_1 = 26
+# kc1 = KillerConstraint.create_constraint(pos_list_1, killer_sum_1, prep_at_init=False)
 
-pos_list_2 = [(1,8), (2,8)]
-killer_sum_2 = 10
-kc2 = KillerConstraint.create_constraint(pos_list_2, killer_sum_2, prep_at_init=False)
+# pos_list_2 = [(1,8), (2,8)]
+# killer_sum_2 = 10
+# kc2 = KillerConstraint.create_constraint(pos_list_2, killer_sum_2, prep_at_init=False)
 
-CONFIG_CONSTRAINTS = [kc1, kc2]
+# CONFIG_CONSTRAINTS = [kc1, kc2]
+
+
+
+CONFIG_PUZZLE_BOARD = np.zeros((9, 9))
+CONFIG_CONSTRAINTS = []

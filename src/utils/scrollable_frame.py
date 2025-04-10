@@ -39,3 +39,10 @@ class ScrollableFrame(tk.Frame):
     def _on_mousewheel(self, event):
         """ 鼠标滚轮滚动逻辑 """
         self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+    
+    def scroll_to_bottom(self):
+        """ 滚动到容器底部 """
+        # 更新滚动区域以确保计算准确
+        self._update_scroll_region()
+        # 计算垂直滚动位置（0.0 是顶部，1.0 是底部）
+        self.canvas.yview_moveto(1.0)

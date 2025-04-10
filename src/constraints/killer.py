@@ -91,11 +91,15 @@ def _numba_is_valid(board: np.ndarray, rows: np.ndarray, cols: np.ndarray, kille
     if numba_has_conflict(board):
         return False
     sum = 0
+    seen = np.zeros(10, dtype=np.bool_)
     for i in range(len(rows)):
         val = board[rows[i], cols[i]]
         if val == 0:
             # 发现未填数字，保持约束有效
-            return True  
+            return True
+        if seen[val]:
+            return False
+        seen[val] = True
         sum += val
     return sum == killer_sum
 

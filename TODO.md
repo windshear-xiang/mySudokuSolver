@@ -59,6 +59,8 @@ git push origin main
     + [x] constraints已经高度优化了，preprocess可以numba加速
   + [x] 修改了算法，加上了uniqueness in blocks
   + [x] 计数器改成对象方法和属性，而不是类方法和属性
+  + [x] killer写错了
+  + [ ] 改序数的BUG
   + [ ] preprocess 改成可以是稀疏的
   + [ ] 优先查unknown，或者有解的，或者随机化，避免卡死在无解情况
   + [ ] 修整一下DenseMulticellConstraints等等类里乱七八糟的对象，少用列表
@@ -98,6 +100,7 @@ git push origin main
       + [x] cancel
       + [x] confirm
     + [x] 添加 constraint 的功能
+    + [x] 滚动条
   + [x] 加clear的功能
   + [x] 撤销和移动的按键绑定
   + [x] 更好的无解和冲突显示
