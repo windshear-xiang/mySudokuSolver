@@ -101,11 +101,17 @@ class Ordinal:
         elif self == Ordinal([0]) or other == Ordinal([0]):
             return Ordinal([0])
         elif isinstance(other, Ordinal):
-            new_array = np.concatenate((
-                self.array[:-1],
-                np.asarray([self.array[-1] * other.array[0]], dtype=np.int32),
-                other.array[1:]
-            ))
+            if other.array[0] == 0:
+                new_array = np.concatenate((
+                    np.zeros(self.order, dtype=np.int32),
+                    other.array[1:]
+                ))
+            else:
+                new_array = np.concatenate((
+                    self.array[:-1],
+                    np.asarray([self.array[-1] * other.array[0]], dtype=np.int32),
+                    other.array[1:]
+                ))
             return Ordinal(new_array)
         else:
             raise NotImplementedError
@@ -129,3 +135,7 @@ def print_board_in_ord(board):
 
 # 导入模块时强行预编译
 _ = digit2ord(9) > digit2ord(6) + Ordinal(np.array([0,2])) * Ordinal(np.array([0,1,2])) >= digit2ord(1)
+
+o1 = Ordinal([0, 0, 1, 1])
+o2 = Ordinal([0, 0, 1])
+print(f"{o1} * {o2} = {o1 * o2}")
