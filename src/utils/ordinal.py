@@ -136,6 +136,3 @@ def print_board_in_ord(board):
 # 导入模块时强行预编译
 _ = digit2ord(9) > digit2ord(6) + Ordinal(np.array([0,2])) * Ordinal(np.array([0,1,2])) >= digit2ord(1)
 
-o1 = Ordinal([0, 0, 1, 1])
-o2 = Ordinal([0, 0, 1])
-print(f"{o1} * {o2} = {o1 * o2}")

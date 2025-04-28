@@ -65,6 +65,7 @@ class SudokuController:
         # 初始刷新界面
         self.view.root.after(REFRESH_TIME_INTERVAL, self.check_update)
         self.on_refresh_constraints()
+        self.on_clear_results()
     
     def _bind_events(self):
         """注册视图层事件到控制层处理函数"""
