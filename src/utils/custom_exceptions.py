@@ -1,0 +1,3 @@
+
+class StopSolverSignal(Exception):
+    pass

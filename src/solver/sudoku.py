@@ -6,6 +6,7 @@ import threading
 from queue import Queue
 from typing import Optional, Sequence
 from src.utils.type_definitions import *
+from src.utils.custom_exceptions import StopSolverSignal
 from src.constraints import Constraint
 from .solvingboard import SolvingBoard
 
@@ -111,7 +112,7 @@ class Sudoku:
         # 多线程控制是否需要中止求解
         if self.stop_event is not None:
             if self.stop_event.is_set():
-                raise InterruptedError
+                raise StopSolverSignal
 
         self.search_counter += 1
 

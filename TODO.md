@@ -111,6 +111,6 @@ git push origin main
     + 只存构造所用的参数，以及用一个小东西存一下类型，就够了
   + [x] 彩色constraint
   + [ ] 记忆化的worker
-  + [ ] 改用custom exception
+  + [x] 改用custom exception
   
   
