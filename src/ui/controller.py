@@ -19,6 +19,7 @@ from src.solver.sudoku import Sudoku
 from src.constraints import CONSTRAINT_CLASSES_LIST, Constraint
 from src.utils.check_conflict import has_conflict
 from src.utils.type_definitions import *
+from src.utils.custom_exceptions import StopSolverSignal
 
 REFRESH_TIME_INTERVAL = 100
 
@@ -420,7 +421,7 @@ def worker(s: Sudoku, log):
                 log(f"C{i} 预处理完成. {time.perf_counter() - prep_timer:.3f}s")
         log("开始求解")
         s.solve_true_candidates()
-    except InterruptedError:
+    except StopSolverSignal:
         s.out_q.put(s.tuf_board.copy())
         sc, ct = s.get_counter_stat()
         log(f"求解已被中止. {sc}steps {ct:.3f}s")
